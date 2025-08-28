@@ -1,5 +1,6 @@
 const User = require("../models/user.model");
 const nodemailer = require("nodemailer");
+const bcrypt = require("bcrypt");
 
 // Cấu hình transporter cho Gmail
 const transporter = nodemailer.createTransport({
@@ -35,7 +36,16 @@ exports.getAllUsers = async (req, res) => {
 exports.createUser = async (req, res) => {
   try {
     const { fullName, username, password, email, dob, phone, address } = req.body;
-    const newUser = await User.create({ fullName, username, password, email, dob, phone, address });
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = await User.create({ 
+      fullName, 
+      username, 
+      password: hashedPassword, 
+      email, 
+      dob, 
+      phone, 
+      address 
+    });
     res.status(201).json(newUser);
   } catch (err) {
     res.status(500).json({ message: "Lỗi khi tạo user", error: err });
@@ -89,10 +99,11 @@ exports.verifyOtp = async (req, res) => {
       return res.status(400).json({ message: "OTP đã hết hạn." });
     }
     // Tạo user khi xác thực thành công
+    const hashedPassword = await bcrypt.hash(info.password, 10);
     await User.create({
       fullName: info.fullName,
       username: info.username,
-      password: info.password,
+      password: hashedPassword,
       email: info.email,
       dob: info.dob,
       phone: info.phone,
@@ -103,5 +114,82 @@ exports.verifyOtp = async (req, res) => {
     res.json({ message: "Xác thực thành công!" });
   } catch (err) {
     res.status(500).json({ message: "Lỗi khi xác thực OTP", error: err });
+  }
+};
+
+// Quên mật khẩu: gửi OTP qua email
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    // Kiểm tra email có tồn tại không
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
+      return res.status(404).json({ message: "Email không tồn tại." });
+    }
+    // Sinh OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpires = Date.now() + 5 * 60 * 1000; // 5 phút
+    // Lưu OTP vào session
+    req.session.forgotPasswordInfo = {
+      email,
+      otp,
+      otpExpires,
+    };
+    // Gửi email OTP
+    await sendOtpEmail(email, otp);
+    res.status(200).json({ message: "Đã gửi OTP tới email. Vui lòng kiểm tra và xác thực." });
+  } catch (err) {
+    res.status(500).json({ message: "Lỗi khi gửi OTP", error: err });
+  }
+};
+
+// Xác thực OTP cho quên mật khẩu
+exports.verifyForgotOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    const info = req.session.forgotPasswordInfo;
+    if (!info || info.email !== email) {
+      return res.status(400).json({ message: "Không có thông tin quên mật khẩu trong session." });
+    }
+    if (info.otp !== otp) {
+      return res.status(400).json({ message: "OTP không đúng." });
+    }
+    if (Date.now() > info.otpExpires) {
+      return res.status(400).json({ message: "OTP đã hết hạn." });
+    }
+    res.status(200).json({ message: "OTP hợp lệ." });
+  } catch (err) {
+    res.status(500).json({ message: "Lỗi khi xác thực OTP", error: err });
+  }
+};
+
+// Đặt lại mật khẩu
+exports.resetPassword = async (req, res) => {
+  try {
+    const { email, otp, newPassword, confirmPassword } = req.body;
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ message: "Mật khẩu xác nhận không khớp." });
+    }
+    const info = req.session.forgotPasswordInfo;
+    if (!info || info.email !== email) {
+      return res.status(400).json({ message: "Không có thông tin quên mật khẩu trong session." });
+    }
+    if (info.otp !== otp) {
+      return res.status(400).json({ message: "OTP không đúng." });
+    }
+    if (Date.now() > info.otpExpires) {
+      return res.status(400).json({ message: "OTP đã hết hạn." });
+    }
+    // Cập nhật mật khẩu mới
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await User.update(
+      { password: hashedPassword },
+      { where: { email } }
+    );
+    // Xóa thông tin quên mật khẩu khỏi session
+    req.session.forgotPasswordInfo = null;
+    res.status(200).json({ message: "Đặt lại mật khẩu thành công." });
+  } catch (err) {
+    res.status(500).json({ message: "Lỗi khi đặt lại mật khẩu", error: err });
   }
 };
