@@ -10,7 +10,7 @@ function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post("http://localhost:3001/api/auth/login", {
+      const res = await axios.post("http://localhost:8080/api/auth/login", {
         username,
         password,
       });
@@ -50,7 +50,7 @@ function Login() {
           Login
         </button>
         <p className="mt-4 text-center text-gray-600">
-          Don’t have an account?{" "}
+          Don't have an account?{" "}
           <Link to="/register" className="text-indigo-500 font-semibold">
             Register
           </Link>
