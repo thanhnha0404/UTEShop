@@ -10,7 +10,6 @@ function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      // Giữ base URL theo biến môi trường (cũ), bổ sung endpoint /login (mới)
       const authUrl = process.env.REACT_APP_AUTH_BASE_URL || "http://localhost:8080/api/auth";
       const res = await axios.post(`${authUrl}/login`, {
         username,

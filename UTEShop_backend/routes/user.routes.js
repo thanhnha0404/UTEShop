@@ -1,24 +1,20 @@
 const express = require("express");
 const router = express.Router();
-const userController = require("../controllers/user.controller.js")
+const userController = require("../controllers/user.controller.js");
 
 // GET all users
 router.get("/", userController.getAllUsers);
-<<<<<<< HEAD
-=======
+
+// GET user by id (chỉ có ở nhánh mới, không trùng nên giữ lại)
 router.get("/:id", userController.getUserById);
->>>>>>> bccee8695258419678b269516d9170dd038d8ebf
 
 // POST create new user
 router.post("/", userController.createUser);
 
-<<<<<<< HEAD
-// POST register: gửi OTP qua email
+// POST register: gửi OTP qua email (chỉ có ở nhánh cũ, giữ lại)
 router.post("/register", userController.registerUser);
 
-// POST verify OTP
+// POST verify OTP (chỉ có ở nhánh cũ, giữ lại)
 router.post("/verify-otp", userController.verifyOtp);
 
-=======
->>>>>>> bccee8695258419678b269516d9170dd038d8ebf
 module.exports = router;

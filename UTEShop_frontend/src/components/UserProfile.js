@@ -27,7 +27,7 @@ function UserProfile() {
     let isMounted = true;
     const fetchUser = async () => {
       try {
-        const response = await axios.get("http://localhost:3001/users/1");
+        const response = await axios.get("http://localhost:8080/api/users/1");
         if (!isMounted) return;
 
         const data = response?.data || {};
