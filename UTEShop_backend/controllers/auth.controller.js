@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
 const User = require("../models/user.model");
 
 exports.login = async (req, res) => {
@@ -8,8 +9,14 @@ exports.login = async (req, res) => {
       return res.status(400).json({ message: "Username and password are required" });
     }
 
-    const user = await User.findOne({ where: { username, password } });
+    const user = await User.findOne({ where: { username } });
     if (!user) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    // Compare password with hashed password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
