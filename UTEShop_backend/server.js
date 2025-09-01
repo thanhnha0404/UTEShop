@@ -4,6 +4,7 @@ const session = require("express-session");
 const cors = require("cors");
 const db = require("./models");
 const userRoutes = require("./routes/user.routes");
+const authRoutes = require("./routes/auth.routes");
 
 const app = express();
 const PORT = 8080;
@@ -28,8 +29,9 @@ app.use(session({
   },
 }));
 
-// API user
-app.use("/users", userRoutes);
+// API routes
+app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
 
 // Sync DB
 db.sequelize.sync({ force: false })
