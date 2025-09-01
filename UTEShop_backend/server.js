@@ -1,6 +1,5 @@
 const express = require("express");
 const bodyParser = require("body-parser");
-<<<<<<< HEAD
 const session = require("express-session");
 const cors = require("cors");
 const db = require("./models");
@@ -33,21 +32,6 @@ app.use(session({
 // API routes
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
-=======
-const db = require("./models");
-const cors = require("cors");
-const userRoutes = require("./routes/user.routes");
-
-const app = express();
-const PORT = 3001;
-app.use(cors());
-
-
-app.use(bodyParser.json());
-
-// API user
-app.use("/users", userRoutes);
->>>>>>> bccee8695258419678b269516d9170dd038d8ebf
 
 // Sync DB
 db.sequelize.sync({ force: false })
