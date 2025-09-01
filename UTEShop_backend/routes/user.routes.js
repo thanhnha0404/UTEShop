@@ -17,4 +17,13 @@ router.post("/register", userController.registerUser);
 // POST verify OTP (chỉ có ở nhánh cũ, giữ lại)
 router.post("/verify-otp", userController.verifyOtp);
 
+// POST forgot password: gửi OTP
+router.post("/forgot-password", userController.forgotPassword);
+
+// POST verify OTP cho quên mật khẩu
+router.post("/verify-forgot-otp", userController.verifyForgotOtp);
+
+// POST reset password
+router.post("/reset-password", userController.resetPassword);
+
 module.exports = router;

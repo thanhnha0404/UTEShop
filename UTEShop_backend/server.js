@@ -26,6 +26,7 @@ app.use(session({
   cookie: {
     maxAge: 10 * 60 * 1000, // 10 phút
     sameSite: "lax",
+    secure: process.env.NODE_ENV === "production", // Chỉ secure trong production
   },
 }));
 
