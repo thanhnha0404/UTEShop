@@ -73,7 +73,18 @@ exports.registerUser = async (req, res) => {
     // Kiểm tra email đã tồn tại chưa
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
-      return res.status(400).json({ message: "Email đã được sử dụng." });
+      return res.status(400).json({
+        message: "Email đã được sử dụng.",
+        errors: { email: "Email đã được sử dụng." },
+      });
+    }
+    // Kiểm tra username đã tồn tại chưa
+    const existingUsername = await User.findOne({ where: { username } });
+    if (existingUsername) {
+      return res.status(400).json({
+        message: "Tên đăng nhập đã được sử dụng.",
+        errors: { username: "Tên đăng nhập đã được sử dụng." },
+      });
     }
     // Sinh OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -112,7 +123,21 @@ exports.verifyOtp = async (req, res) => {
     if (Date.now() > info.otpExpires) {
       return res.status(400).json({ message: "OTP đã hết hạn." });
     }
-    // Tạo user khi xác thực thành công
+    // Tạo user khi xác thực thành công (re-check trùng để tránh race condition)
+    const existingEmail = await User.findOne({ where: { email: info.email } });
+    if (existingEmail) {
+      return res.status(400).json({
+        message: "Email đã được sử dụng.",
+        errors: { email: "Email đã được sử dụng." },
+      });
+    }
+    const existingUsername = await User.findOne({ where: { username: info.username } });
+    if (existingUsername) {
+      return res.status(400).json({
+        message: "Tên đăng nhập đã được sử dụng.",
+        errors: { username: "Tên đăng nhập đã được sử dụng." },
+      });
+    }
     const hashedPassword = await bcrypt.hash(info.password, 10);
     await User.create({
       fullName: info.fullName,
@@ -205,5 +230,32 @@ exports.resetPassword = async (req, res) => {
     res.status(200).json({ message: "Đặt lại mật khẩu thành công." });
   } catch (err) {
     res.status(500).json({ message: "Lỗi khi đặt lại mật khẩu", error: err });
+  }
+};
+
+// Kiểm tra email có khả dụng không
+exports.checkEmail = async (req, res) => {
+  try {
+    const { email } = req.query || {};
+    if (!email || !String(email).trim()) {
+      return res.status(400).json({ message: "Thiếu email" });
+    }
+    const user = await User.findOne({ where: { email } });
+    return res.json({ available: !user });
+  } catch (err) {
+    res.status(500).json({ message: "Lỗi khi kiểm tra email", error: err });
+  }
+};
+// Kiểm tra username có khả dụng không
+exports.checkUsername = async (req, res) => {
+  try {
+    const { username } = req.query || {};
+    if (!username || !String(username).trim()) {
+      return res.status(400).json({ message: "Thiếu username" });
+    }
+    const user = await User.findOne({ where: { username } });
+    return res.json({ available: !user });
+  } catch (err) {
+    res.status(500).json({ message: "Lỗi khi kiểm tra username", error: err });
   }
 };
