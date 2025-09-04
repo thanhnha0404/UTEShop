@@ -1,16 +1,42 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
+
+// Các trang và component
 import RegisterPage from "./pages/register.pages";
+import LoginPage from "./pages/login.pages";
 import ForgotPasswordPage from "./pages/ForgotPassword.pages";
+import Login from "./components/Login";
+import UserProfile from "./components/UserProfile";
+import HomePage from "./pages/Home.pages";
+import ProductDetailPage from "./pages/ProductDetail.pages";
+import Header from "./components/Header";
+
+function AppRoutes() {
+  const location = useLocation();
+  const hideHeader = ["/login", "/register", "/forgot-password"].includes(location.pathname);
+  return (
+    <>
+      {!hideHeader && <Header />}
+      <Routes>
+        {/* Điều hướng mặc định */}
+        <Route path="/" element={<HomePage />} />
+        <Route path="/product/:id" element={<ProductDetailPage />} />
+
+        {/* Các routes */}
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/custom-login" element={<Login />} />
+        <Route path="/profile" element={<UserProfile />} />
+      </Routes>
+    </>
+  );
+}
 
 function App() {
   return (
     <Router>
-      <Routes>
-        <Route path="/" element={<Navigate to="/register" replace />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-      </Routes>
+      <AppRoutes />
     </Router>
   );
 }

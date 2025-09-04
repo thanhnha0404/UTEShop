@@ -1,7 +1,8 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { validateRegisterForm } from "../utils/validate";
-import { registerRequestOtp, registerConfirm } from "../services/user.services";
+import { registerRequestOtp, registerConfirm, checkUsernameAvailable, checkEmailAvailable } from "../services/user.services";
 
 export default function RegisterForm() {
   const [form, setForm] = useState({
@@ -26,6 +27,32 @@ export default function RegisterForm() {
     setForm({ ...form, [e.target.id]: e.target.value });
   };
 
+  const handleUsernameBlur = async () => {
+    const username = form.username?.trim();
+    if (!username) return; // đã có validate rỗng
+    try {
+      const { available } = await checkUsernameAvailable(username);
+      if (!available) {
+        setErrors((prev) => ({ ...prev, username: "Tên đăng nhập đã được sử dụng." }));
+      }
+    } catch (err) {
+      // bỏ qua lỗi mạng cho check này, không chặn UX
+    }
+  };
+
+  const handleEmailBlur = async () => {
+    const email = form.email?.trim();
+    if (!email) return; // đã có validate rỗng
+    try {
+      const { available } = await checkEmailAvailable(email);
+      if (!available) {
+        setErrors((prev) => ({ ...prev, email: "Email đã được sử dụng." }));
+      }
+    } catch (err) {
+      // bỏ qua lỗi mạng cho check này, không chặn UX
+    }
+  };
+
   const sendOtp = async () => {
     const errs = validateRegisterForm(form);
     setErrors(errs);
@@ -38,6 +65,10 @@ export default function RegisterForm() {
       setStep("otp");
       setNotice({ type: "info", text: "OTP đã được gửi, vui lòng kiểm tra." });
     } catch (err) {
+      const serverErrors = err?.response?.data?.errors;
+      if (serverErrors && typeof serverErrors === "object") {
+        setErrors(serverErrors);
+      }
       setNotice({
         type: "error",
         text: err?.response?.data?.message || "Gửi OTP thất bại.",
@@ -71,6 +102,10 @@ export default function RegisterForm() {
       setStep("form");
       setErrors({});
     } catch (err) {
+      const serverErrors = err?.response?.data?.errors;
+      if (serverErrors && typeof serverErrors === "object") {
+        setErrors(serverErrors);
+      }
       setNotice({
         type: "error",
         text: err?.response?.data?.message || "Xác minh OTP thất bại.",
@@ -89,9 +124,9 @@ export default function RegisterForm() {
           <>
             <input id="fullName" value={form.fullName} onChange={handleChange} placeholder="Họ và tên" className="w-full mb-1 px-4 py-3 border rounded-lg" />
             {errors.fullName && <p className="text-red-500">{errors.fullName}</p>}
-            <input id="username" value={form.username} onChange={handleChange} placeholder="Tên đăng nhập" className="w-full mb-1 px-4 py-3 border rounded-lg" />
+            <input id="username" value={form.username} onChange={handleChange} onBlur={handleUsernameBlur} placeholder="Tên đăng nhập" className="w-full mb-1 px-4 py-3 border rounded-lg" />
             {errors.username && <p className="text-red-500">{errors.username}</p>}
-            <input id="email" type="email" value={form.email} onChange={handleChange} placeholder="Email" className="w-full mb-1 px-4 py-3 border rounded-lg" />
+            <input id="email" type="email" value={form.email} onChange={handleChange} onBlur={handleEmailBlur} placeholder="Email" className="w-full mb-1 px-4 py-3 border rounded-lg" />
             {errors.email && <p className="text-red-500">{errors.email}</p>}
             <input id="phone" value={form.phone} onChange={handleChange} placeholder="Số điện thoại" className="w-full mb-1 px-4 py-3 border rounded-lg" />
             {errors.phone && <p className="text-red-500">{errors.phone}</p>}
@@ -113,6 +148,10 @@ export default function RegisterForm() {
             </div>
             {errors.confirmPassword && <p className="text-red-500">{errors.confirmPassword}</p>}
             <button type="button" onClick={sendOtp} className="w-full py-3 text-white font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 mt-3">Gửi OTP</button>
+            <div className="mt-4 text-sm text-gray-600 text-center">
+              Đã có tài khoản? {" "}
+              <Link to="/login" className="text-blue-600 font-semibold hover:underline">Đăng nhập</Link>
+            </div>
           </>
         )}
 
@@ -121,6 +160,10 @@ export default function RegisterForm() {
             <input id="otp" value={form.otp} onChange={handleChange} placeholder="Nhập OTP" className="w-full mb-1 px-4 py-3 border rounded-lg" />
             {errors.otp && <p className="text-red-500">{errors.otp}</p>}
             <button type="button" onClick={confirmRegister} className="w-full py-3 text-white font-semibold rounded-lg bg-green-600 hover:bg-green-700 mt-3">Xác minh OTP & Đăng ký</button>
+            <div className="mt-4 text-sm text-gray-600 text-center">
+              Đã có tài khoản? {" "}
+              <Link to="/login" className="text-blue-600 font-semibold hover:underline">Đăng nhập</Link>
+            </div>
           </>
         )}
 
