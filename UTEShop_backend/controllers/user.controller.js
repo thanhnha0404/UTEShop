@@ -46,6 +46,40 @@ exports.getUserById = async (req, res) => {
   }
 };
 
+// Cập nhật user theo ID
+exports.updateUserById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { fullName, email, dob, phone, address } = req.body || {};
+
+    const user = await User.findByPk(id);
+    if (!user) {
+      return res.status(404).json({ message: "Không tìm thấy user" });
+    }
+
+    // Không cho phép cập nhật username và password ở endpoint này
+    user.fullName = typeof fullName !== "undefined" ? fullName : user.fullName;
+    user.email = typeof email !== "undefined" ? email : user.email;
+    user.dob = typeof dob !== "undefined" ? dob : user.dob;
+    user.phone = typeof phone !== "undefined" ? phone : user.phone;
+    user.address = typeof address !== "undefined" ? address : user.address;
+
+    await user.save();
+
+    return res.json({
+      id: user.id,
+      fullName: user.fullName,
+      username: user.username,
+      email: user.email,
+      dob: user.dob,
+      phone: user.phone,
+      address: user.address,
+    });
+  } catch (err) {
+    return res.status(500).json({ message: "Lỗi khi cập nhật user", error: err?.message || String(err) });
+  }
+};
+
 // Thêm user mới
 exports.createUser = async (req, res) => {
   try {
@@ -259,3 +293,4 @@ exports.checkUsername = async (req, res) => {
     res.status(500).json({ message: "Lỗi khi kiểm tra username", error: err });
   }
 };
+

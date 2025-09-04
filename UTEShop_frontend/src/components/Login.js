@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate, Link } from "react-router-dom";
+import { saveAuth } from "../utils/authStorage";
 import { Eye, EyeOff } from "lucide-react";
 
 function Login() {
@@ -17,8 +18,9 @@ function Login() {
         username,
         password,
       });
-      localStorage.setItem("token", res.data.token);
-      navigate("/dashboard");
+      const { token, user } = res.data || {};
+      saveAuth(token, user);
+      navigate("/");
     } catch (err) {
       const message = err?.response?.data?.message || err?.message || "Login failed";
       alert("Login failed: " + message);
