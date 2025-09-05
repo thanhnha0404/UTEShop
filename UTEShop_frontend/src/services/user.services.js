@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_BASE_URL = "http://localhost:8080/api/users";
+const API_BASE_URL = "http://localhost:8080/users";
 
 export const registerRequestOtp = async (payload) => {
   return axios.post(`${API_BASE_URL}/register`, payload, { withCredentials: true });

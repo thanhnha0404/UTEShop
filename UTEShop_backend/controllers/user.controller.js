@@ -32,20 +32,6 @@ exports.getAllUsers = async (req, res) => {
   }
 };
 
-// Lấy user theo ID
-exports.getUserById = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const user = await User.findByPk(id);
-    if (!user) {
-      return res.status(404).json({ message: "Không tìm thấy user" });
-    }
-    res.json(user);
-  } catch (err) {
-    res.status(500).json({ message: "Lỗi khi lấy dữ liệu user", error: err });
-  }
-};
-
 // Thêm user mới
 exports.createUser = async (req, res) => {
   try {
