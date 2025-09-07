@@ -10,8 +10,7 @@ const {
 // GET all users
 router.get("/", userController.getAllUsers);
 
-// GET user by id (chỉ có ở nhánh mới, không trùng nên giữ lại)
-router.get("/:id", userController.getUserById);
+
 
 // POST create new user
 router.post("/", userController.createUser);
@@ -45,5 +44,11 @@ router.post("/verify-forgot-otp", userController.verifyForgotOtp);
 
 // POST reset password
 router.post("/reset-password", userController.resetPassword);
+
+// GET user by id (chỉ có ở nhánh mới, không trùng nên giữ lại)
+router.get("/:id", userController.getUserById);
+
+// UPDATE user by id
+router.put("/:id", userController.updateUserById);
 
 module.exports = router;

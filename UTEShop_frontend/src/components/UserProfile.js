@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { getUser } from "../utils/authStorage";
+import Modal from "./Modal";
 
 function formatDateToDDMMYYYY(isoDate) {
   if (!isoDate) return "";
@@ -22,35 +24,53 @@ function UserProfile() {
     username: "",
     email: "",
   });
+  const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
-    let isMounted = true;
-    const fetchUser = async () => {
-      try {
-        const response = await axios.get("http://localhost:8080/api/users/1");
-        if (!isMounted) return;
+    const load = async () => {
+      const stored = getUser();
+      if (!stored) {
+        setErrorMessage("Bạn chưa đăng nhập");
+        setIsLoading(false);
+        return;
+      }
 
+      const baseState = {
+        fullName: stored.fullName || stored.name || "",
+        address: stored.address || "",
+        birthDate: formatDateToDDMMYYYY(stored.birthDate || stored.dob || ""),
+        phoneNumber: stored.phoneNumber || stored.phone || "",
+        username: stored.username || "",
+        email: stored.email || "",
+      };
+
+      const needsMore = !baseState.address || !baseState.birthDate || !baseState.phoneNumber;
+      if (!needsMore || !stored.id) {
+        setUser(baseState);
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const response = await axios.get(`http://localhost:8080/api/users/${stored.id}`);
         const data = response?.data || {};
         setUser({
-          fullName: data.fullName || data.name || "",
-          address: data.address || "",
-          birthDate: formatDateToDDMMYYYY(data.birthDate || data.dob || ""),
-          phoneNumber: data.phoneNumber || data.phone || "",
-          username: data.username || "",
-          email: data.email || "",
+          fullName: baseState.fullName,
+          address: data.address || baseState.address,
+          birthDate: formatDateToDDMMYYYY(data.birthDate || data.dob || baseState.birthDate),
+          phoneNumber: data.phoneNumber || data.phone || baseState.phoneNumber,
+          username: baseState.username || data.username || "",
+          email: baseState.email || data.email || "",
         });
         setIsLoading(false);
       } catch (error) {
-        if (!isMounted) return;
-        setErrorMessage(error?.response?.data?.message || error?.message || "Failed to load user");
+        setUser(baseState);
+        setErrorMessage("");
         setIsLoading(false);
       }
     };
 
-    fetchUser();
-    return () => {
-      isMounted = false;
-    };
+    load();
   }, []);
 
   return (
@@ -74,7 +94,54 @@ function UserProfile() {
         ) : errorMessage ? (
           <div className="text-center text-red-200">{errorMessage}</div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <form
+            id="profile-form"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              try {
+                const stored = getUser();
+                if (!stored?.id) {
+                  setErrorMessage("Không xác định được tài khoản");
+                  return;
+                }
+                const payload = {
+                  fullName: user.fullName || "",
+                  address: user.address || "",
+                  dob: user.birthDate ? new Date(user.birthDate.split('/').reverse().join('-')) : null,
+                  phone: user.phoneNumber || "",
+                  email: user.email || "",
+                };
+                // Convert date to yyyy-mm-dd if valid
+                if (payload.dob instanceof Date && !Number.isNaN(payload.dob.getTime())) {
+                  const y = payload.dob.getFullYear();
+                  const m = String(payload.dob.getMonth() + 1).padStart(2, '0');
+                  const d = String(payload.dob.getDate()).padStart(2, '0');
+                  payload.dob = `${y}-${m}-${d}`;
+                } else {
+                  delete payload.dob;
+                }
+
+                const res = await axios.put(`http://localhost:8080/api/users/${stored.id}`, payload);
+                const updated = res?.data || {};
+                setUser({
+                  fullName: updated.fullName || user.fullName,
+                  address: updated.address || user.address,
+                  birthDate: formatDateToDDMMYYYY(updated.dob || user.birthDate),
+                  phoneNumber: updated.phone || user.phoneNumber,
+                  username: updated.username || user.username,
+                  email: updated.email || user.email,
+                });
+                try {
+                  const merged = { ...(stored || {}), ...updated };
+                  localStorage.setItem('auth_user', JSON.stringify(merged));
+                } catch (_) {}
+                setShowSuccess(true);
+              } catch (err) {
+                setErrorMessage(err?.response?.data?.message || err?.message || 'Cập nhật thất bại');
+              }
+            }}
+            className="grid grid-cols-1 md:grid-cols-2 gap-6"
+          >
             {/** Helper for empty values */}
             {/** We keep simple inline mapping for readability */}
             <div>
@@ -82,8 +149,8 @@ function UserProfile() {
               <input
                 type="text"
                 className="w-full p-3 rounded-lg bg-white/90 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                value={user.fullName || "Chưa cập nhật"}
-                readOnly
+                value={user.fullName || ""}
+                onChange={(e) => setUser((u) => ({ ...u, fullName: e.target.value }))}
               />
             </div>
 
@@ -92,8 +159,8 @@ function UserProfile() {
               <input
                 type="text"
                 className="w-full p-3 rounded-lg bg-white/90 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                value={user.address || "Chưa cập nhật"}
-                readOnly
+                value={user.address || ""}
+                onChange={(e) => setUser((u) => ({ ...u, address: e.target.value }))}
               />
             </div>
 
@@ -102,8 +169,8 @@ function UserProfile() {
               <input
                 type="text"
                 className="w-full p-3 rounded-lg bg-white/90 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                value={user.birthDate || "Chưa cập nhật"}
-                readOnly
+                value={user.birthDate || ""}
+                onChange={(e) => setUser((u) => ({ ...u, birthDate: e.target.value }))}
               />
             </div>
 
@@ -112,7 +179,7 @@ function UserProfile() {
               <input
                 type="text"
                 className="w-full p-3 rounded-lg bg-white/90 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                value={user.username || "Chưa cập nhật"}
+                value={user.username || ""}
                 readOnly
               />
             </div>
@@ -122,8 +189,8 @@ function UserProfile() {
               <input
                 type="text"
                 className="w-full p-3 rounded-lg bg-white/90 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                value={user.phoneNumber || "Chưa cập nhật"}
-                readOnly
+                value={user.phoneNumber || ""}
+                onChange={(e) => setUser((u) => ({ ...u, phoneNumber: e.target.value }))}
               />
             </div>
 
@@ -132,21 +199,34 @@ function UserProfile() {
               <input
                 type="email"
                 className="w-full p-3 rounded-lg bg-white/90 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                value={user.email || "Chưa cập nhật"}
-                readOnly
+                value={user.email || ""}
+                onChange={(e) => setUser((u) => ({ ...u, email: e.target.value }))}
               />
             </div>
-          </div>
+          </form>
         )}
 
         <div className="mt-8 flex justify-center">
           <button
-            type="button"
+            type="submit"
+            form="profile-form"
             className="px-6 py-3 rounded-lg bg-fuchsia-600 hover:bg-fuchsia-700 text-white font-semibold shadow-md"
           >
             Cập nhật thông tin
           </button>
         </div>
+        <Modal
+          open={showSuccess}
+          title="Xin cảm ơn!"
+          description="Form đã được gửi thành công."
+          onClose={() => setShowSuccess(false)}
+          actions={(
+            <button
+              onClick={() => setShowSuccess(false)}
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg"
+            >OK</button>
+          )}
+        />
       </div>
     </div>
   );

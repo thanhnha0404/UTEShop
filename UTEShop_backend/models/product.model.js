@@ -13,19 +13,9 @@ const Product = sequelize.define(
     views: { type: DataTypes.INTEGER, defaultValue: 0 },
     sold: { type: DataTypes.INTEGER, defaultValue: 0 },
     imageUrls: {
-      type: DataTypes.TEXT,
+      type: DataTypes.JSON,   // dùng JSON thay vì TEXT
       allowNull: false,
-      get() {
-        const rawValue = this.getDataValue("imageUrls");
-        try {
-          return rawValue ? JSON.parse(rawValue) : [];
-        } catch (e) {
-          return [];
-        }
-      },
-      set(value) {
-        this.setDataValue("imageUrls", JSON.stringify(value || []));
-      }
+      defaultValue: []        // mặc định là mảng rỗng
     }
   },
   {

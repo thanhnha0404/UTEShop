@@ -17,7 +17,7 @@ async function run() {
       { name: "Công nghệ", slug: "cong-nghe" },
       { name: "Kinh doanh", slug: "kinh-doanh" },
     ];
-    const categories = await Category.bulkCreate(categoriesData, { ignoreDuplicates: true });
+    await Category.bulkCreate(categoriesData, { ignoreDuplicates: true });
 
     const categoryMap = {};
     for (const c of await Category.findAll()) {
@@ -166,5 +166,3 @@ async function run() {
 }
 
 run();
-
-

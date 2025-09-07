@@ -45,7 +45,7 @@ export default function ProductDetailPage() {
             loop={images.length > 1}
             thumbs={{ swiper: thumbsSwiper && !thumbsSwiper.destroyed ? thumbsSwiper : null }}
             className="w-full h-80"
-         >
+          >
             {images.map((src, idx) => (
               <SwiperSlide key={idx}>
                 <img src={src} alt={`${product.name}-${idx}`} className="w-full h-80 object-cover" />
@@ -62,7 +62,7 @@ export default function ProductDetailPage() {
             freeMode
             watchSlidesProgress
             className="thumbs-swiper"
-         >
+          >
             {images.map((src, idx) => (
               <SwiperSlide key={idx}>
                 <div className="w-full h-16 rounded overflow-hidden border">
@@ -82,24 +82,44 @@ export default function ProductDetailPage() {
         <div className="mb-4">
           {product.salePrice ? (
             <>
-              <span className="text-red-600 text-2xl font-bold mr-3">{Number(product.salePrice).toLocaleString()}₫</span>
-              <span className="text-gray-400 line-through">{Number(product.price).toLocaleString()}₫</span>
+              <span className="text-red-600 text-2xl font-bold mr-3">
+                {Number(product.salePrice).toLocaleString()}₫
+              </span>
+              <span className="text-gray-400 line-through">
+                {Number(product.price).toLocaleString()}₫
+              </span>
             </>
           ) : (
-            <span className="text-gray-900 text-2xl font-bold">{Number(product.price).toLocaleString()}₫</span>
+            <span className="text-gray-900 text-2xl font-bold">
+              {Number(product.price).toLocaleString()}₫
+            </span>
           )}
         </div>
         <p className="text-sm text-gray-600 mb-2">Tồn kho: {product.stock}</p>
         <div className="flex items-center gap-3 mb-4">
-          <button disabled={qty<=1} onClick={()=>setQty(q=>Math.max(1,q-1))} className="px-3 py-1 bg-gray-100 rounded">-</button>
+          <button
+            disabled={qty <= 1}
+            onClick={() => setQty(q => Math.max(1, q - 1))}
+            className="px-3 py-1 bg-gray-100 rounded"
+          >
+            -
+          </button>
           <span>{qty}</span>
-          <button disabled={qty>=product.stock} onClick={()=>setQty(q=>Math.min(product.stock,q+1))} className="px-3 py-1 bg-gray-100 rounded">+</button>
+          <button
+            disabled={qty >= product.stock}
+            onClick={() => setQty(q => Math.min(product.stock, q + 1))}
+            className="px-3 py-1 bg-gray-100 rounded"
+          >
+            +
+          </button>
         </div>
-        <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold">Thêm vào giỏ</button>
-        <div className="mt-6 text-gray-700 whitespace-pre-line">{product.description}</div>
+        <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold">
+          Thêm vào giỏ
+        </button>
+        <div className="mt-6 text-gray-700 whitespace-pre-line">
+          {product.description}
+        </div>
       </div>
     </div>
   );
 }
-
-

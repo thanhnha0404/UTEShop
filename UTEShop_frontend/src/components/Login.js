@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate, Link } from "react-router-dom";
+import { saveAuth } from "../utils/authStorage";
 import { Eye, EyeOff } from "lucide-react";
 
 function Login() {
@@ -12,15 +13,18 @@ function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const authUrl = process.env.REACT_APP_AUTH_BASE_URL || "http://localhost:8080/api/auth";
+      const authUrl =
+        process.env.REACT_APP_AUTH_BASE_URL || "http://localhost:8080/api/auth";
       const res = await axios.post(`${authUrl}/login`, {
         username,
         password,
       });
-      localStorage.setItem("token", res.data.token);
-      navigate("/dashboard");
+      const { token, user } = res.data || {};
+      saveAuth(token, user);
+      navigate("/");
     } catch (err) {
-      const message = err?.response?.data?.message || err?.message || "Login failed";
+      const message =
+        err?.response?.data?.message || err?.message || "Login failed";
       alert("Login failed: " + message);
     }
   };
@@ -31,7 +35,9 @@ function Login() {
         onSubmit={handleLogin}
         className="bg-white p-8 rounded-2xl shadow-xl w-96"
       >
-        <h2 className="text-3xl font-bold mb-6 text-center text-gray-800">Đăng nhập</h2>
+        <h2 className="text-3xl font-bold mb-6 text-center text-gray-800">
+          Đăng nhập
+        </h2>
         <input
           type="text"
           placeholder="Username"
