@@ -9,6 +9,8 @@ import Login from "./components/Login";
 import UserProfile from "./components/UserProfile";
 import HomePage from "./pages/Home.pages";
 import ProductDetailPage from "./pages/ProductDetail.pages";
+import DrinksPage from "./pages/DrinksPage";
+import DrinkDetailPage from "./pages/DrinkDetailPage";
 import Header from "./components/Header";
 
 function AppRoutes() {
@@ -21,6 +23,8 @@ function AppRoutes() {
         {/* Điều hướng mặc định */}
         <Route path="/" element={<HomePage />} />
         <Route path="/product/:id" element={<ProductDetailPage />} />
+        <Route path="/drinks" element={<DrinksPage />} />
+        <Route path="/drink/:id" element={<DrinkDetailPage />} />
 
         {/* Các routes */}
         <Route path="/register" element={<RegisterPage />} />

@@ -1,7 +1,7 @@
 const { sequelize } = require("../config/db.config");
 const User = require("./user.model");
 const Category = require("./category.model");
-const Product = require("./product.model");
+const Drink = require("./drink.model");
 
 (async () => {
   try {
@@ -17,10 +17,10 @@ const db = {};
 db.sequelize = sequelize;
 db.User = User;
 db.Category = Category;
-db.Product = Product;
+db.Drink = Drink;
 
 // Associations
-Product.belongsTo(Category, { foreignKey: "categoryId", as: "category" });
-Category.hasMany(Product, { foreignKey: "categoryId", as: "products" });
+Drink.belongsTo(Category, { foreignKey: "category_id", as: "category" });
+Category.hasMany(Drink, { foreignKey: "category_id", as: "drinks" });
 
 module.exports = db;

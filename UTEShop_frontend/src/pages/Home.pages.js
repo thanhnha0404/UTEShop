@@ -8,9 +8,9 @@ function Section({ title, products }) {
       <h2 className="text-2xl font-bold mb-4">{title}</h2>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {products.map((p) => (
-          <Link to={`/product/${p.id}`} key={p.id} className="bg-white rounded-xl shadow hover:shadow-lg transition overflow-hidden">
+          <Link to={`/drink/${p.id}`} key={p.id} className="bg-white rounded-xl shadow hover:shadow-lg transition overflow-hidden">
             <div className="relative">
-              <img src={(p.imageUrls?.[0]) || "/logo192.png"} alt={p.name} className="w-full h-40 object-cover" />
+              <img src={p.image_url || "/logo192.png"} alt={p.name} className="w-full h-40 object-cover" />
               {p.salePrice && p.price && (
                 <span className="absolute top-2 left-2 bg-red-600 text-white text-xs px-2 py-1 rounded">
                   -{Math.round(((p.price - p.salePrice) / p.price) * 100)}%
@@ -19,7 +19,7 @@ function Section({ title, products }) {
             </div>
             <div className="p-3">
               <p className="font-semibold line-clamp-2 min-h-[40px]">{p.name}</p>
-              <div className="mt-1">
+              <div className="mt-1 mb-2">
                 {p.salePrice ? (
                   <>
                     <span className="text-red-600 font-bold mr-2">{Number(p.salePrice).toLocaleString()}₫</span>
@@ -29,6 +29,15 @@ function Section({ title, products }) {
                   <span className="text-gray-900 font-bold">{Number(p.price).toLocaleString()}₫</span>
                 )}
               </div>
+              <button 
+                className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 px-3 rounded-lg text-sm font-semibold transition"
+                onClick={(e) => {
+                  e.preventDefault();
+                  alert('Đã thêm vào giỏ hàng!');
+                }}
+              >
+                Thêm vào giỏ
+              </button>
             </div>
           </Link>
         ))}
@@ -54,7 +63,7 @@ export default function HomePage() {
 
   return (
     <div className="max-w-6xl mx-auto p-4">
-      <Section title="Sản phẩm mới nhất" products={latest} />
+      <Section title="Đồ uống mới nhất" products={latest} />
       <Section title="Bán chạy" products={best} />
       <Section title="Xem nhiều" products={viewed} />
       <Section title="Khuyến mãi cao" products={discount} />

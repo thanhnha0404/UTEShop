@@ -23,6 +23,12 @@ export default function Header() {
             UTE Shop
           </Link>
           <nav className="flex items-center gap-3">
+            <Link
+              to="/drinks"
+              className="px-4 py-2 text-indigo-600 font-semibold hover:underline"
+            >
+              Đồ uống
+            </Link>
             {isLoggedIn ? (
               <>
                 <Link
