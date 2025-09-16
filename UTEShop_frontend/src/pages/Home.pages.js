@@ -1,16 +1,20 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { getLatestProducts, getBestSellers, getMostViewed, getTopDiscount } from "../services/product.services";
+import { Link, useNavigate } from "react-router-dom";
+import { getLatestProducts, getBestSellers, getMostViewed, getTopDiscount, addToCart } from "../services/product.services";
+import { getToken } from "../utils/authStorage";
+import Modal from "../components/Modal";
 
 function Section({ title, products }) {
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
   return (
     <section className="mb-10">
       <h2 className="text-2xl font-bold mb-4">{title}</h2>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {products.map((p) => (
-          <Link to={`/product/${p.id}`} key={p.id} className="bg-white rounded-xl shadow hover:shadow-lg transition overflow-hidden">
+          <Link to={`/drink/${p.id}`} key={p.id} className="bg-white rounded-xl shadow hover:shadow-lg transition overflow-hidden">
             <div className="relative">
-              <img src={(p.imageUrls?.[0]) || "/logo192.png"} alt={p.name} className="w-full h-40 object-cover" />
+              <img src={p.image_url || "/logo192.png"} alt={p.name} className="w-full h-40 object-cover" />
               {p.salePrice && p.price && (
                 <span className="absolute top-2 left-2 bg-red-600 text-white text-xs px-2 py-1 rounded">
                   -{Math.round(((p.price - p.salePrice) / p.price) * 100)}%
@@ -19,7 +23,7 @@ function Section({ title, products }) {
             </div>
             <div className="p-3">
               <p className="font-semibold line-clamp-2 min-h-[40px]">{p.name}</p>
-              <div className="mt-1">
+              <div className="mt-1 mb-2">
                 {p.salePrice ? (
                   <>
                     <span className="text-red-600 font-bold mr-2">{Number(p.salePrice).toLocaleString()}₫</span>
@@ -29,10 +33,37 @@ function Section({ title, products }) {
                   <span className="text-gray-900 font-bold">{Number(p.price).toLocaleString()}₫</span>
                 )}
               </div>
+              <button 
+                className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 px-3 rounded-lg text-sm font-semibold transition"
+                onClick={(e) => {
+                  e.preventDefault();
+                  const token = getToken();
+                  if (!token) {
+                    navigate('/login');
+                    return;
+                  }
+                  addToCart({ drinkId: p.id, quantity: 1, token })
+                    .then(() => {
+                      setOpen(true);
+                      window.dispatchEvent(new Event('cart:updated'));
+                      setTimeout(() => setOpen(false), 1200);
+                    })
+                    .catch(err => alert(err?.response?.data?.message || err?.message || 'Lỗi'));
+                }}
+              >
+                Thêm vào giỏ
+              </button>
             </div>
           </Link>
         ))}
       </div>
+      <Modal
+        open={open}
+        title="Thành công"
+        description="Đã thêm vào giỏ hàng!"
+        onClose={() => setOpen(false)}
+        actions={<button onClick={() => setOpen(false)} className="px-4 py-2 bg-indigo-600 text-white rounded-lg">OK</button>}
+      />
     </section>
   );
 }
@@ -54,7 +85,7 @@ export default function HomePage() {
 
   return (
     <div className="max-w-6xl mx-auto p-4">
-      <Section title="Sản phẩm mới nhất" products={latest} />
+      <Section title="Đồ uống mới nhất" products={latest} />
       <Section title="Bán chạy" products={best} />
       <Section title="Xem nhiều" products={viewed} />
       <Section title="Khuyến mãi cao" products={discount} />

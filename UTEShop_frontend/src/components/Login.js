@@ -13,7 +13,8 @@ function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const authUrl = process.env.REACT_APP_AUTH_BASE_URL || "http://localhost:8080/api/auth";
+      const authUrl =
+        process.env.REACT_APP_AUTH_BASE_URL || "http://localhost:8080/api/auth";
       const res = await axios.post(`${authUrl}/login`, {
         username,
         password,
@@ -22,7 +23,8 @@ function Login() {
       saveAuth(token, user);
       navigate("/");
     } catch (err) {
-      const message = err?.response?.data?.message || err?.message || "Login failed";
+      const message =
+        err?.response?.data?.message || err?.message || "Login failed";
       alert("Login failed: " + message);
     }
   };
@@ -33,7 +35,9 @@ function Login() {
         onSubmit={handleLogin}
         className="bg-white p-8 rounded-2xl shadow-xl w-96"
       >
-        <h2 className="text-3xl font-bold mb-6 text-center text-gray-800">Đăng nhập</h2>
+        <h2 className="text-3xl font-bold mb-6 text-center text-gray-800">
+          Đăng nhập
+        </h2>
         <input
           type="text"
           placeholder="Username"

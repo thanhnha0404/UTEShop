@@ -293,4 +293,3 @@ exports.checkUsername = async (req, res) => {
     res.status(500).json({ message: "Lỗi khi kiểm tra username", error: err });
   }
 };
-

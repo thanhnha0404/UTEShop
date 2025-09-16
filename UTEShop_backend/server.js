@@ -5,7 +5,9 @@ const cors = require("cors");
 const db = require("./models");
 const userRoutes = require("./routes/user.routes");
 const authRoutes = require("./routes/auth.routes");
-const productRoutes = require("./routes/product.routes");
+const drinkRoutes = require("./routes/drink.routes");
+const categoryRoutes = require("./routes/category.routes");
+const cartRoutes = require("./routes/cart.routes");
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -34,7 +36,9 @@ app.use(session({
 // API routes
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
-app.use("/api/products", productRoutes);
+app.use("/api/drinks", drinkRoutes);
+app.use("/api/categories", categoryRoutes);
+app.use("/api/cart", cartRoutes);
 
 // Sync DB
 db.sequelize.sync({ force: false })
