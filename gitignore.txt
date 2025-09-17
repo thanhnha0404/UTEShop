@@ -1,2 +1,0 @@
-/UTEShop_frontend/node_modules
-/UTEShop_backend/node_modules
