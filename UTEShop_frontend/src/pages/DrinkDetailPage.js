@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { getProductDetail } from "../services/product.services";
+import { getProductDetail, addToCart } from "../services/product.services";
+import { getToken } from "../utils/authStorage";
+import { useNavigate } from "react-router-dom";
+import Modal from "../components/Modal";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Thumbs, FreeMode, Pagination } from "swiper/modules";
 import "swiper/css";
@@ -23,6 +26,8 @@ export default function DrinkDetailPage() {
   const [thumbsSwiper, setThumbsSwiper] = useState(null);
   const [qty, setQty] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     (async () => {
@@ -196,13 +201,32 @@ export default function DrinkDetailPage() {
           {/* Nút thêm vào giỏ */}
           <button 
             className="w-full bg-purple-600 hover:bg-purple-700 text-white py-4 px-6 rounded-lg font-semibold text-lg transition"
-            onClick={() => {
-              // TODO: Thêm vào giỏ hàng
-              alert(`Đã thêm ${qty} ${drink.name} vào giỏ hàng!`);
+            onClick={async () => {
+              const token = getToken();
+              if (!token) {
+                navigate('/login');
+                return;
+              }
+              try {
+                await addToCart({ drinkId: drink.id, quantity: qty, token });
+                setOpen(true);
+                window.dispatchEvent(new Event('cart:updated'));
+                setTimeout(() => setOpen(false), 1200);
+              } catch (err) {
+                alert(err?.response?.data?.message || err?.message || 'Lỗi');
+              }
             }}
           >
             Thêm vào giỏ hàng
           </button>
+
+          <Modal
+            open={open}
+            title="Thành công"
+            description="Đã thêm vào giỏ hàng!"
+            onClose={() => setOpen(false)}
+            actions={<button onClick={() => setOpen(false)} className="px-4 py-2 bg-indigo-600 text-white rounded-lg">OK</button>}
+          />
 
           {/* Mô tả */}
           <div className="bg-gray-50 p-4 rounded-lg">

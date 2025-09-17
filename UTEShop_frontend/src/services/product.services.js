@@ -25,4 +25,31 @@ export const getAllDrinks = (page = 1, limit = 8, categoryId = null) =>
 export const getCategories = () =>
   axios.get(`${API_BASE_URL}/categories`).then(r => r.data);
 
+export const addToCart = ({ drinkId, quantity, token }) =>
+  axios.post(
+    `${API_BASE_URL}/cart/add`,
+    { drinkId, quantity },
+    { headers: token ? { Authorization: `Bearer ${token}` } : undefined }
+  ).then(r => r.data);
+
+export const getMyCart = ({ token }) =>
+  axios.get(`${API_BASE_URL}/cart/all`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  }).then(r => r.data);
+
+export const updateCartItem = ({ drinkId, quantity, token }) =>
+  axios.put(`${API_BASE_URL}/cart/update`, { drinkId, quantity }, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  }).then(r => r.data);
+
+export const removeFromCart = ({ drinkId, token }) =>
+  axios.post(`${API_BASE_URL}/cart/remove`, { drinkId }, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  }).then(r => r.data);
+
+export const checkoutCOD = ({ token }) =>
+  axios.post(`${API_BASE_URL}/checkout/cod`, {}, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  }).then(r => r.data);
+
 

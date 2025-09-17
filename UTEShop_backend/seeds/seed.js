@@ -7,8 +7,7 @@ async function run() {
   try {
     await db.sequelize.authenticate();
     console.log("✅ DB connected");
-
-    await db.sequelize.sync({ force: true });
+    await db.sequelize.sync({ alter: true });
 
     // Categories
     const categoriesData = [

@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { getProductDetail } from "../services/product.services";
+import { getProductDetail, addToCart } from "../services/product.services";
+import { getToken } from "../utils/authStorage";
+import { useNavigate } from "react-router-dom";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Thumbs, FreeMode } from "swiper/modules";
 import "swiper/css";
@@ -21,6 +23,7 @@ export default function ProductDetailPage() {
   const [product, setProduct] = useState(null);
   const [thumbsSwiper, setThumbsSwiper] = useState(null);
   const [qty, setQty] = useState(1);
+  const navigate = useNavigate();
 
   useEffect(() => {
     (async () => {
@@ -116,7 +119,23 @@ export default function ProductDetailPage() {
             +
           </button>
         </div>
-        <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold">
+        <button
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold"
+          onClick={async () => {
+            const token = getToken();
+            if (!token) {
+              navigate('/login');
+              return;
+            }
+            try {
+              await addToCart({ drinkId: product.id, quantity: qty, token });
+              alert('Đã thêm vào giỏ hàng!');
+              window.dispatchEvent(new Event('cart:updated'));
+            } catch (err) {
+              alert(err?.response?.data?.message || err?.message || 'Lỗi');
+            }
+          }}
+        >
           Thêm vào giỏ
         </button>
         <div className="mt-6 text-gray-700 whitespace-pre-line">

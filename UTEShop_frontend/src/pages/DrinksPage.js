@@ -1,8 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { getAllDrinks, getCategories } from "../services/product.services";
+import { Link, useNavigate } from "react-router-dom";
+import { getAllDrinks, getCategories, addToCart } from "../services/product.services";
+import Modal from "../components/Modal";
+import { getToken } from "../utils/authStorage";
 
 function DrinkCard({ drink }) {
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
   return (
     <Link to={`/drink/${drink.id}`} className="bg-white rounded-xl shadow hover:shadow-lg transition overflow-hidden">
       <div className="relative">
@@ -42,12 +46,29 @@ function DrinkCard({ drink }) {
           className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded-lg font-semibold transition"
           onClick={(e) => {
             e.preventDefault();
-            // TODO: Thêm vào giỏ hàng
-            alert('Đã thêm vào giỏ hàng!');
+            const token = getToken();
+            if (!token) {
+              navigate('/login');
+              return;
+            }
+            addToCart({ drinkId: drink.id, quantity: 1, token })
+              .then(() => {
+                setOpen(true);
+                window.dispatchEvent(new Event('cart:updated'));
+                setTimeout(() => setOpen(false), 1200);
+              })
+              .catch(err => alert(err?.response?.data?.message || err?.message || 'Lỗi'));
           }}
         >
           Thêm vào giỏ hàng
         </button>
+        <Modal
+          open={open}
+          title="Thành công"
+          description="Đã thêm vào giỏ hàng!"
+          onClose={() => setOpen(false)}
+          actions={<button onClick={() => setOpen(false)} className="px-4 py-2 bg-indigo-600 text-white rounded-lg">OK</button>}
+        />
       </div>
     </Link>
   );

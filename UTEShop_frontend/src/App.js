@@ -12,6 +12,10 @@ import ProductDetailPage from "./pages/ProductDetail.pages";
 import DrinksPage from "./pages/DrinksPage";
 import DrinkDetailPage from "./pages/DrinkDetailPage";
 import Header from "./components/Header";
+import Toast from "./components/Toast";
+import CheckoutPage from "./pages/CheckoutPage";
+import OrdersPage from "./pages/OrdersPage";
+import CartPage from "./pages/CartPage";
 
 function AppRoutes() {
   const location = useLocation();
@@ -19,12 +23,16 @@ function AppRoutes() {
   return (
     <>
       {!hideHeader && <Header />}
+      <Toast />
       <Routes>
         {/* Điều hướng mặc định */}
         <Route path="/" element={<HomePage />} />
         <Route path="/product/:id" element={<ProductDetailPage />} />
         <Route path="/drinks" element={<DrinksPage />} />
         <Route path="/drink/:id" element={<DrinkDetailPage />} />
+        <Route path="/cart" element={<CartPage />} />
+        <Route path="/checkout" element={<CheckoutPage />} />
+        <Route path="/orders" element={<OrdersPage />} />
 
         {/* Các routes */}
         <Route path="/register" element={<RegisterPage />} />
