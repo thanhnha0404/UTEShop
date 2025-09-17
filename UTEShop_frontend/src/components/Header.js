@@ -10,8 +10,10 @@ export default function Header() {
   const isLoggedIn = !!user;
   const [showConfirm, setShowConfirm] = useState(false);
   const [showCart, setShowCart] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const [cart, setCart] = useState([]);
   const cartRef = useRef(null);
+  const userMenuRef = useRef(null);
 
   const fetchCart = async () => {
     try {
@@ -26,6 +28,9 @@ export default function Header() {
     function onClickOutside(e) {
       if (cartRef.current && !cartRef.current.contains(e.target)) {
         setShowCart(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+        setShowUserMenu(false);
       }
     }
     document.addEventListener("mousedown", onClickOutside);
@@ -117,18 +122,73 @@ export default function Header() {
 
             {isLoggedIn ? (
               <>
-                <Link
-                  to="/profile"
-                  className="px-4 py-2 text-indigo-600 font-semibold hover:underline"
-                >
-                  {user.fullName || user.username || "Tài khoản"}
-                </Link>
-                <button
-                  onClick={() => setShowConfirm(true)}
-                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200"
-                >
-                  Đăng xuất
-                </button>
+                {/* User menu dropdown */}
+                <div className="relative" ref={userMenuRef}>
+                  <button
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100"
+                    onClick={() => setShowUserMenu(!showUserMenu)}
+                  >
+                    <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                        className="w-5 h-5 text-white"
+                      >
+                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                      </svg>
+                    </div>
+                    <span className="text-indigo-600 font-semibold">
+                      {user.fullName || user.username || "Tài khoản"}
+                    </span>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      className={`w-4 h-4 text-gray-500 transition-transform ${showUserMenu ? 'rotate-180' : ''}`}
+                    >
+                      <path d="M7 10l5 5 5-5z"/>
+                    </svg>
+                  </button>
+                  
+                  {showUserMenu && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white border rounded-lg shadow-xl z-50">
+                      <div className="py-1">
+                        <Link
+                          to="/profile"
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          onClick={() => setShowUserMenu(false)}
+                        >
+                          Tài khoản của tôi
+                        </Link>
+                        <Link
+                          to="/orders"
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          onClick={() => setShowUserMenu(false)}
+                        >
+                          Đơn hàng của tôi
+                        </Link>
+                        <Link
+                          to="/favorites"
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          onClick={() => setShowUserMenu(false)}
+                        >
+                          Danh sách yêu thích
+                        </Link>
+                        <hr className="my-1" />
+                        <button
+                          onClick={() => {
+                            setShowUserMenu(false);
+                            setShowConfirm(true);
+                          }}
+                          className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                        >
+                          Đăng xuất
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </>
             ) : (
               <>
