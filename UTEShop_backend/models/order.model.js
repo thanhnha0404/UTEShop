@@ -49,6 +49,16 @@ const Order = sequelize.define("Order", {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: false,
   },
+  loyalty_points_used: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+    comment: "Số xu đã sử dụng trong đơn hàng này"
+  },
+  loyalty_points_earned: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+    comment: "Số xu được tích lũy từ đơn hàng này"
+  },
   shipping_address: {
     type: DataTypes.TEXT,
     allowNull: true,

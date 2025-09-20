@@ -2,12 +2,14 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getMyCart, checkoutCOD } from "../services/product.services";
 import { getToken } from "../utils/authStorage";
+import PaymentWithLoyalty from "../components/PaymentWithLoyalty";
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
   const [items, setItems] = useState([]);
   const [payment, setPayment] = useState("cod");
   const [showPromo, setShowPromo] = useState(false);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
   const token = getToken();
 
   useEffect(() => {
@@ -28,22 +30,63 @@ export default function CheckoutPage() {
   const shippingFee = items.length > 0 ? 20000 : 0;
   const total = subtotal + shippingFee;
 
-  const placeOrder = async () => {
+  const handleCheckout = async (paymentData) => {
+    console.log('🚀 Starting checkout process...', { paymentData, token: !!token });
+    
     if (payment !== "cod") {
       const event = new CustomEvent("toast:show", { detail: { type: "error", message: "VNPay chưa được triển khai trong bản này" } });
       window.dispatchEvent(event);
       return;
     }
+    
+    // Kiểm tra xem user đã đăng nhập chưa
+    if (!token) {
+      console.error('❌ No token found');
+      const event = new CustomEvent("toast:show", { detail: { type: "error", message: "Vui lòng đăng nhập để thanh toán" } });
+      window.dispatchEvent(event);
+      navigate('/login');
+      return;
+    }
+    
+    setCheckoutLoading(true);
     try {
-      const data = await checkoutCOD({ token });
-      const event = new CustomEvent("toast:show", { detail: { type: "success", message: "Đơn hàng đã được đặt thành công!" } });
-      window.dispatchEvent(event);
-      sessionStorage.setItem("last_order", JSON.stringify(data.order));
-      window.dispatchEvent(new Event('cart:updated'));
-      setTimeout(() => navigate("/orders"), 900);
+      console.log('📤 Sending checkout request...');
+      
+      // Gọi API checkout với thông tin xu
+      const response = await fetch('http://localhost:8080/api/checkout/cod', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          loyaltyPointsUsed: paymentData.loyaltyPointsUsed || 0
+        })
+      });
+
+      console.log('📥 Checkout response status:', response.status);
+      const result = await response.json();
+      console.log('📥 Checkout response data:', result);
+      
+      if (response.ok) {
+        console.log('✅ Checkout successful!');
+        const event = new CustomEvent("toast:show", { detail: { type: "success", message: "Đơn hàng đã được đặt thành công!" } });
+        window.dispatchEvent(event);
+        sessionStorage.setItem("last_order", JSON.stringify(result.order));
+        window.dispatchEvent(new Event('cart:updated'));
+        setTimeout(() => navigate("/orders"), 900);
+      } else {
+        console.error('❌ Checkout failed:', result);
+        const event = new CustomEvent("toast:show", { detail: { type: "error", message: result.message || "Có lỗi khi đặt hàng" } });
+        window.dispatchEvent(event);
+      }
     } catch (err) {
-      const event = new CustomEvent("toast:show", { detail: { type: "error", message: err?.response?.data?.message || "Có lỗi khi đặt hàng" } });
+      console.error('❌ Checkout error:', err);
+      const event = new CustomEvent("toast:show", { detail: { type: "error", message: "Có lỗi khi đặt hàng. Vui lòng thử lại." } });
       window.dispatchEvent(event);
+    } finally {
+      setCheckoutLoading(false);
     }
   };
 
@@ -101,16 +144,12 @@ export default function CheckoutPage() {
           )}
         </section>
 
-        <section className="bg-white rounded-xl border">
-          <div className="p-4 border-b font-bold">SỬ DỤNG UTE COIN</div>
-          <div className="p-4">
-            <div className="flex items-center gap-3">
-              <input className="w-20 border rounded px-2 py-1" type="number" min="0" defaultValue={0} />
-              <span className="text-gray-600">coins (Số dư: 0 coins)</span>
-            </div>
-            <div className="text-xs text-red-500 mt-2">Không thể áp dụng coin nếu đã vượt quá 50% giá trị tổng tiền</div>
-          </div>
-        </section>
+        {/* Payment with Loyalty Points */}
+        <PaymentWithLoyalty
+          cartItems={items}
+          onCheckout={handleCheckout}
+          loading={checkoutLoading}
+        />
 
         <section className="bg-white rounded-xl border">
           <div className="p-4 border-b font-bold">KIỂM TRA ĐƠN HÀNG</div>
@@ -154,15 +193,13 @@ export default function CheckoutPage() {
             <span>Voucher giảm giá:</span>
             <span>- 0 đ</span>
           </div>
-          <div className="flex justify-between mb-4">
-            <span>Giảm giá từ UTE Coin:</span>
-            <span>- 0 đ</span>
-          </div>
           <div className="flex justify-between text-lg font-extrabold">
             <span>Thành tiền:</span>
             <span className="text-red-600">{total.toLocaleString()} đ</span>
           </div>
-          <button onClick={placeOrder} className="w-full mt-4 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-lg">XÁC NHẬN THANH TOÁN</button>
+          <div className="text-xs text-gray-500 mt-2">
+            * Sử dụng xu để giảm giá trong phần thanh toán bên dưới
+          </div>
         </div>
       </div>
     </div>

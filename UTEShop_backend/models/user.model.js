@@ -32,6 +32,11 @@ const User = sequelize.define("User", {
   address: {
     type: DataTypes.STRING,
   },
+  loyalty_points: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+    comment: "Tổng số điểm tích lũy xu hiện có"
+  },
 }, {
   tableName: "users", 
   timestamps: false,    

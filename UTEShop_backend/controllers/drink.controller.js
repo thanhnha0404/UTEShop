@@ -68,9 +68,15 @@ exports.getDetail = async (req, res) => {
     const { id } = req.params;
     const item = await Drink.findByPk(id, { include: [includeCategory] });
     if (!item) return res.status(404).json({ message: "Không tìm thấy đồ uống" });
+    
+    // Thêm thông tin trạng thái tồn kho
+    const itemData = item.toJSON();
+    itemData.isOutOfStock = item.stock <= 0;
+    itemData.stockStatus = item.stock <= 0 ? "Hết hàng" : `Còn ${item.stock} sản phẩm`;
+    
     // increase views async (no await)
     Drink.update({ views: (item.views || 0) + 1 }, { where: { id } }).catch(() => {});
-    res.json(item);
+    res.json(itemData);
   } catch (err) {
     res.status(500).json({ message: "Lỗi lấy chi tiết đồ uống", error: String(err) });
   }

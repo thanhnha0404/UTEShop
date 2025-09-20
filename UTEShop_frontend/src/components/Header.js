@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { getUser, clearAuth, getToken } from "../utils/authStorage";
 import { getMyCart } from "../services/product.services";
 import Modal from "./Modal";
+import LoyaltyWallet from "./LoyaltyWallet";
 
 export default function Header() {
   const navigate = useNavigate();
@@ -122,6 +123,9 @@ export default function Header() {
 
             {isLoggedIn ? (
               <>
+                {/* Loyalty Wallet */}
+                <LoyaltyWallet />
+                
                 {/* User menu dropdown */}
                 <div className="relative" ref={userMenuRef}>
                   <button

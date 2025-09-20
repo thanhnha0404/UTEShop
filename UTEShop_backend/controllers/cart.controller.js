@@ -11,7 +11,24 @@ exports.addToCart = async (req, res) => {
 
     const drink = await db.Drink.findByPk(targetId);
     if (!drink) return res.status(404).json({ message: "Drink not found" });
-    if (drink.stock < qty) return res.status(400).json({ message: "Not enough stock" });
+    
+    // Kiểm tra hết hàng
+    if (drink.stock <= 0) {
+      return res.status(400).json({ 
+        message: "Sản phẩm đã hết hàng",
+        productName: drink.name,
+        stock: drink.stock
+      });
+    }
+    
+    if (drink.stock < qty) {
+      return res.status(400).json({ 
+        message: `Chỉ còn ${drink.stock} sản phẩm trong kho`,
+        productName: drink.name,
+        availableStock: drink.stock,
+        requestedQuantity: qty
+      });
+    }
 
     const [item, created] = await db.CartItem.findOrCreate({
       where: { user_id: userId, drink_id: targetId },
@@ -20,7 +37,15 @@ exports.addToCart = async (req, res) => {
 
     if (!created) {
       const newQty = item.quantity + qty;
-      if (newQty > drink.stock) return res.status(400).json({ message: "Exceeds stock" });
+      if (newQty > drink.stock) {
+        return res.status(400).json({ 
+          message: `Chỉ có thể thêm tối đa ${drink.stock} sản phẩm`,
+          productName: drink.name,
+          availableStock: drink.stock,
+          currentInCart: item.quantity,
+          requestedToAdd: qty
+        });
+      }
       item.quantity = newQty;
       await item.save();
     }
@@ -41,13 +66,20 @@ exports.getMyCart = async (req, res) => {
       order: [["updated_at", "DESC"]],
     });
     return res.json({
-      items: items.map(i => ({
-        id: i.id,
-        drinkId: i.drink_id,
-        quantity: i.quantity,
-        checked: i.checked,
-        drink: i.drink,
-      }))
+      items: items.map(i => {
+        const drinkData = i.drink ? i.drink.toJSON() : null;
+        if (drinkData) {
+          drinkData.isOutOfStock = drinkData.stock <= 0;
+          drinkData.stockStatus = drinkData.stock <= 0 ? "Hết hàng" : `Còn ${drinkData.stock} sản phẩm`;
+        }
+        return {
+          id: i.id,
+          drinkId: i.drink_id,
+          quantity: i.quantity,
+          checked: i.checked,
+          drink: drinkData,
+        };
+      })
     });
   } catch (err) {
     return res.status(500).json({ message: "Get cart error", error: err?.message || String(err) });
@@ -67,7 +99,25 @@ exports.updateQuantity = async (req, res) => {
     if (!item) return res.status(404).json({ message: "Item not found" });
     const drink = await db.Drink.findByPk(targetId);
     if (!drink) return res.status(404).json({ message: "Drink not found" });
-    if (qty > drink.stock) return res.status(400).json({ message: "Exceeds stock" });
+    
+    // Kiểm tra hết hàng
+    if (drink.stock <= 0) {
+      return res.status(400).json({ 
+        message: "Sản phẩm đã hết hàng",
+        productName: drink.name,
+        stock: drink.stock
+      });
+    }
+    
+    if (qty > drink.stock) {
+      return res.status(400).json({ 
+        message: `Chỉ có thể cập nhật tối đa ${drink.stock} sản phẩm`,
+        productName: drink.name,
+        availableStock: drink.stock,
+        requestedQuantity: qty
+      });
+    }
+    
     item.quantity = qty;
     await item.save();
     return res.json({ message: "Updated" });

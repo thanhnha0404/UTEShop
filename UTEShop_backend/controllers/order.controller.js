@@ -21,10 +21,49 @@ exports.createOrder = async (req, res) => {
     // Tính tổng tiền
     const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const shippingFee = items.length > 0 ? 20000 : 0;
-    const total = subtotal + shippingFee;
+    
+    // Lấy thông tin user để kiểm tra xu hiện có
+    const user = await db.User.findByPk(userId);
+    const loyaltyPointsUsed = req.body.loyaltyPointsUsed || 0;
+    
+    // Tính tổng tiền sau khi trừ xu (1 xu = 1 VNĐ)
+    const totalBeforeDiscount = subtotal + shippingFee;
+    const total = Math.max(0, totalBeforeDiscount - loyaltyPointsUsed);
+    
+    // Tính xu được tích lũy (20.000 VNĐ = 100 xu) - chỉ tính trên subtotal, không tính shipping fee
+    const loyaltyPointsEarned = Math.floor(subtotal / 20000) * 100;
 
     // Tạo mã đơn hàng
     const orderNumber = `UTE${Date.now()}${Math.floor(Math.random() * 1000)}`;
+
+    // Kiểm tra xu có đủ không
+    if (loyaltyPointsUsed > user.loyalty_points) {
+      await t.rollback();
+      return res.status(400).json({ 
+        message: "Không đủ xu để sử dụng", 
+        currentPoints: user.loyalty_points,
+        requestedPoints: loyaltyPointsUsed
+      });
+    }
+
+    // Kiểm tra tồn kho trước khi tạo đơn hàng
+    for (const item of items) {
+      const drink = await db.Drink.findByPk(item.drinkId, { transaction: t });
+      if (!drink) {
+        await t.rollback();
+        return res.status(400).json({ message: `Sản phẩm ID ${item.drinkId} không tồn tại` });
+      }
+      
+      if (drink.stock < item.quantity) {
+        await t.rollback();
+        return res.status(400).json({ 
+          message: `Sản phẩm "${drink.name}" chỉ còn ${drink.stock} sản phẩm trong kho`,
+          productName: drink.name,
+          availableStock: drink.stock,
+          requestedQuantity: item.quantity
+        });
+      }
+    }
 
     // Tạo đơn hàng
     console.log("🔍 Tạo đơn hàng với dữ liệu:", {
@@ -35,6 +74,8 @@ exports.createOrder = async (req, res) => {
       subtotal,
       shipping_fee: shippingFee,
       total,
+      loyalty_points_used: loyaltyPointsUsed,
+      loyalty_points_earned: loyaltyPointsEarned,
       shipping_address: shippingAddress,
       shipping_phone: shippingPhone,
       notes,
@@ -48,6 +89,8 @@ exports.createOrder = async (req, res) => {
       subtotal,
       shipping_fee: shippingFee,
       total,
+      loyalty_points_used: loyaltyPointsUsed,
+      loyalty_points_earned: loyaltyPointsEarned,
       shipping_address: shippingAddress,
       shipping_phone: shippingPhone,
       notes,
@@ -70,6 +113,58 @@ exports.createOrder = async (req, res) => {
         }, { transaction: t })
       )
     );
+
+    // Cập nhật stock và sold cho từng sản phẩm
+    for (const item of items) {
+      await db.Drink.update(
+        {
+          stock: db.sequelize.literal(`stock - ${item.quantity}`),
+          sold: db.sequelize.literal(`sold + ${item.quantity}`)
+        },
+        {
+          where: { id: item.drinkId },
+          transaction: t
+        }
+      );
+    }
+
+    // Cập nhật xu của user
+    if (loyaltyPointsUsed > 0) {
+      // Trừ xu đã sử dụng
+      await user.update(
+        { loyalty_points: db.sequelize.literal(`loyalty_points - ${loyaltyPointsUsed}`) },
+        { transaction: t }
+      );
+
+      // Ghi log xu đã sử dụng
+      await db.LoyaltyPoint.create({
+        user_id: userId,
+        points: user.loyalty_points - loyaltyPointsUsed,
+        transaction_type: "used",
+        amount: -loyaltyPointsUsed,
+        used_in_order_id: order.id,
+        description: `Sử dụng ${loyaltyPointsUsed} xu cho đơn hàng ${orderNumber}`
+      }, { transaction: t });
+    }
+
+    // Cộng xu mới vào tài khoản user
+    if (loyaltyPointsEarned > 0) {
+      // Cập nhật xu trong tài khoản user
+      await user.update(
+        { loyalty_points: db.sequelize.literal(`loyalty_points + ${loyaltyPointsEarned}`) },
+        { transaction: t }
+      );
+
+      // Ghi log xu đã tích lũy
+      await db.LoyaltyPoint.create({
+        user_id: userId,
+        points: user.loyalty_points - loyaltyPointsUsed + loyaltyPointsEarned,
+        transaction_type: "earned",
+        amount: loyaltyPointsEarned,
+        earned_from_order_id: order.id,
+        description: `Tích lũy ${loyaltyPointsEarned} xu từ đơn hàng ${orderNumber}`
+      }, { transaction: t });
+    }
 
     // Xóa giỏ hàng
     await db.CartItem.destroy({
@@ -398,6 +493,14 @@ exports.updateOrderStatus = async (req, res) => {
     switch (status) {
       case "confirmed":
         updateData.confirmed_at = now;
+        // Cộng xu khi đơn hàng được xác nhận
+        if (order.loyalty_points_earned > 0) {
+          const user = await db.User.findByPk(order.user_id, { transaction: t });
+          await user.update(
+            { loyalty_points: db.sequelize.literal(`loyalty_points + ${order.loyalty_points_earned}`) },
+            { transaction: t }
+          );
+        }
         break;
       case "preparing":
         updateData.preparing_at = now;
@@ -410,6 +513,33 @@ exports.updateOrderStatus = async (req, res) => {
         break;
       case "cancelled":
         updateData.cancelled_at = now;
+        // Hoàn lại stock và xu khi hủy đơn hàng
+        const orderItems = await db.OrderItem.findAll({
+          where: { order_id: orderId },
+          transaction: t
+        });
+        
+        for (const item of orderItems) {
+          await db.Drink.update(
+            {
+              stock: db.sequelize.literal(`stock + ${item.quantity}`),
+              sold: db.sequelize.literal(`sold - ${item.quantity}`)
+            },
+            {
+              where: { id: item.drink_id },
+              transaction: t
+            }
+          );
+        }
+        
+        // Hoàn lại xu đã sử dụng
+        if (order.loyalty_points_used > 0) {
+          const user = await db.User.findByPk(order.user_id, { transaction: t });
+          await user.update(
+            { loyalty_points: db.sequelize.literal(`loyalty_points + ${order.loyalty_points_used}`) },
+            { transaction: t }
+          );
+        }
         break;
     }
 
@@ -451,5 +581,41 @@ exports.autoConfirmOrders = async () => {
     console.log(`✅ Tự động xác nhận ${orders.length} đơn hàng`);
   } catch (err) {
     console.error("❌ Lỗi tự động xác nhận đơn hàng:", err);
+  }
+};
+
+// Lấy danh sách đơn hàng của user
+exports.getUserOrders = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const orders = await db.Order.findAll({
+      where: { user_id: userId },
+      include: [
+        {
+          model: db.OrderItem,
+          as: "orderItems",
+          include: [
+            {
+              model: db.Drink,
+              as: "drink",
+              attributes: ["id", "name", "image_url"]
+            }
+          ]
+        }
+      ],
+      order: [["created_at", "DESC"]]
+    });
+
+    return res.json({
+      orders: orders
+    });
+
+  } catch (err) {
+    return res.status(500).json({
+      message: "Lỗi khi lấy danh sách đơn hàng",
+      error: err?.message || String(err)
+    });
   }
 };

@@ -10,6 +10,8 @@ const categoryRoutes = require("./routes/category.routes");
 const cartRoutes = require("./routes/cart.routes");
 const checkoutRoutes = require("./routes/checkout.routes");
 const orderRoutes = require("./routes/order.routes");
+const reviewRoutes = require("./routes/review.routes");
+const loyaltyRoutes = require("./routes/loyalty.routes");
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -43,6 +45,8 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/checkout", checkoutRoutes);
 app.use("/api/orders", orderRoutes);
+app.use("/api/reviews", reviewRoutes);
+app.use("/api/loyalty", loyaltyRoutes);
 
 // Sync DB
 db.sequelize.sync({ force: false })

@@ -37,7 +37,8 @@ exports.checkoutCOD = async (req, res) => {
         shippingAddress: user.address || "Chưa cập nhật địa chỉ",
         shippingPhone: user.phone || "Chưa cập nhật số điện thoại",
         notes: "",
-        paymentMethod: "COD"
+        paymentMethod: "COD",
+        loyaltyPointsUsed: req.body.loyaltyPointsUsed || 0
       },
       user: { id: userId }
     };

@@ -4,6 +4,7 @@ import { getProductDetail, addToCart } from "../services/product.services";
 import { getToken } from "../utils/authStorage";
 import { useNavigate } from "react-router-dom";
 import Modal from "../components/Modal";
+import ProductReviews from "../components/ProductReviews";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Thumbs, FreeMode, Pagination } from "swiper/modules";
 import "swiper/css";
@@ -27,6 +28,7 @@ export default function DrinkDetailPage() {
   const [qty, setQty] = useState(1);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
+  const [userOrders, setUserOrders] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -36,6 +38,25 @@ export default function DrinkDetailPage() {
         const data = await getProductDetail(id);
         setDrink(data);
         setThumbsSwiper(null);
+        
+        // Lấy đơn hàng của user để kiểm tra quyền đánh giá
+        const token = getToken();
+        if (token) {
+          try {
+            const response = await fetch('http://localhost:8080/api/orders/my-orders', {
+              credentials: 'include',
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            });
+            if (response.ok) {
+              const ordersData = await response.json();
+              setUserOrders(ordersData.orders || []);
+            }
+          } catch (error) {
+            console.error('Lỗi khi lấy đơn hàng:', error);
+          }
+        }
       } catch (error) {
         console.error('Lỗi tải chi tiết đồ uống:', error);
       } finally {
@@ -158,9 +179,13 @@ export default function DrinkDetailPage() {
 
           {/* Thông tin bổ sung */}
           <div className="grid grid-cols-2 gap-4 text-sm">
-            <div className="bg-blue-50 p-3 rounded-lg">
-              <p className="text-blue-600 font-semibold">Tồn kho</p>
-              <p className="text-blue-800">{drink.stock} sản phẩm</p>
+            <div className={`p-3 rounded-lg ${drink.stock <= 0 ? 'bg-red-50' : 'bg-blue-50'}`}>
+              <p className={`font-semibold ${drink.stock <= 0 ? 'text-red-600' : 'text-blue-600'}`}>
+                Tồn kho
+              </p>
+              <p className={drink.stock <= 0 ? 'text-red-800' : 'text-blue-800'}>
+                {drink.stock <= 0 ? 'Hết hàng' : `${drink.stock} sản phẩm`}
+              </p>
             </div>
             <div className="bg-green-50 p-3 rounded-lg">
               <p className="text-green-600 font-semibold">Đã bán</p>
@@ -189,7 +214,7 @@ export default function DrinkDetailPage() {
               </button>
               <span className="w-12 text-center font-semibold">{qty}</span>
               <button
-                disabled={qty >= drink.stock}
+                disabled={qty >= drink.stock || drink.stock <= 0}
                 onClick={() => setQty(q => Math.min(drink.stock, q + 1))}
                 className="w-8 h-8 bg-gray-200 hover:bg-gray-300 rounded-full flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -200,8 +225,15 @@ export default function DrinkDetailPage() {
 
           {/* Nút thêm vào giỏ */}
           <button 
-            className="w-full bg-purple-600 hover:bg-purple-700 text-white py-4 px-6 rounded-lg font-semibold text-lg transition"
+            disabled={drink.stock <= 0}
+            className={`w-full py-4 px-6 rounded-lg font-semibold text-lg transition ${
+              drink.stock <= 0 
+                ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
+                : 'bg-purple-600 hover:bg-purple-700 text-white'
+            }`}
             onClick={async () => {
+              if (drink.stock <= 0) return;
+              
               const token = getToken();
               if (!token) {
                 navigate('/login');
@@ -217,7 +249,7 @@ export default function DrinkDetailPage() {
               }
             }}
           >
-            Thêm vào giỏ hàng
+            {drink.stock <= 0 ? 'Hết hàng' : 'Thêm vào giỏ hàng'}
           </button>
 
           <Modal
@@ -236,6 +268,11 @@ export default function DrinkDetailPage() {
             </p>
           </div>
         </div>
+      </div>
+
+      {/* Đánh giá sản phẩm */}
+      <div className="mt-8">
+        <ProductReviews drinkId={drink.id} userOrders={userOrders} />
       </div>
     </div>
   );
