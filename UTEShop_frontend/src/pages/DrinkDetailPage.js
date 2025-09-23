@@ -5,6 +5,7 @@ import { getToken } from "../utils/authStorage";
 import { useNavigate } from "react-router-dom";
 import Modal from "../components/Modal";
 import ProductReviews from "../components/ProductReviews";
+import { getFavorites, addFavorite, removeFavorite } from "../services/api.services";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Thumbs, FreeMode, Pagination } from "swiper/modules";
 import "swiper/css";
@@ -30,6 +31,7 @@ export default function DrinkDetailPage() {
   const [open, setOpen] = useState(false);
   const [userOrders, setUserOrders] = useState([]);
   const navigate = useNavigate();
+  const [isFavorite, setIsFavorite] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -53,6 +55,14 @@ export default function DrinkDetailPage() {
               const ordersData = await response.json();
               setUserOrders(ordersData.orders || []);
             }
+            // Lấy danh sách yêu thích và đánh dấu
+            try {
+              const favs = await getFavorites();
+              if (favs.success) {
+                const has = (favs.data.favorites || []).some(f => f.drink?.id === Number(id));
+                setIsFavorite(has);
+              }
+            } catch (_) {}
           } catch (error) {
             console.error('Lỗi khi lấy đơn hàng:', error);
           }
@@ -147,7 +157,37 @@ export default function DrinkDetailPage() {
         {/* Thông tin chi tiết */}
         <div className="space-y-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">{drink.name}</h1>
+            <div className="flex items-start justify-between mb-2">
+              <h1 className="text-3xl font-bold text-gray-800">{drink.name}</h1>
+              <button
+                onClick={async () => {
+                  const token = getToken();
+                  if (!token) { navigate('/login'); return; }
+                  // Optimistic toggle
+                  const next = !isFavorite;
+                  setIsFavorite(next);
+                  try {
+                    if (next) {
+                      const res = await addFavorite(drink.id);
+                      if (!res.success) throw new Error(res.error);
+                    } else {
+                      const res = await removeFavorite(drink.id);
+                      if (!res.success) throw new Error(res.error);
+                    }
+                    // notify other parts (e.g., profile) to refresh
+                    window.dispatchEvent(new Event('favorites:updated'));
+                  } catch (e) {
+                    // revert on failure
+                    setIsFavorite(!next);
+                    window.dispatchEvent(new CustomEvent('toast:show', { detail: { message: 'Không thể cập nhật yêu thích. Vui lòng thử lại.', type: 'error' } }));
+                  }
+                }}
+                className={`ml-3 p-2 rounded-full ${isFavorite ? 'bg-red-500 text-white' : 'bg-gray-100 text-red-500'}`}
+                title={isFavorite ? 'Bỏ yêu thích' : 'Thêm yêu thích'}
+              >
+                {isFavorite ? '❤️' : '🤍'}
+              </button>
+            </div>
             {drink.category && (
               <p className="text-lg text-gray-600 mb-4">Danh mục: {drink.category.name}</p>
             )}

@@ -9,26 +9,34 @@ exports.createReview = async (req, res) => {
 
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-    // Kiểm tra user đã mua sản phẩm này chưa
-    const hasPurchased = await db.OrderItem.findOne({
-      where: {
-        drink_id: drinkId
-      },
-      include: [{
-        model: db.Order,
-        as: "order",
-        where: {
-          user_id: userId,
-          status: ["pending", "confirmed", "preparing", "shipping", "delivered"]
-        }
-      }],
-      transaction: t
-    });
+    // Kiểm tra user đã có đơn (đang chờ hoặc đã hoàn tất) với sản phẩm này chưa
+    let hasPurchased = null;
+    if (orderId) {
+      hasPurchased = await db.OrderItem.findOne({
+        where: { drink_id: drinkId, order_id: orderId },
+        include: [{
+          model: db.Order,
+          as: "order",
+          where: { user_id: userId, status: ["pending", "confirmed", "preparing", "shipping", "delivered"] }
+        }],
+        transaction: t
+      });
+    } else {
+      hasPurchased = await db.OrderItem.findOne({
+        where: { drink_id: drinkId },
+        include: [{
+          model: db.Order,
+          as: "order",
+          where: { user_id: userId, status: ["pending", "confirmed", "preparing", "shipping", "delivered"] }
+        }],
+        transaction: t
+      });
+    }
 
     if (!hasPurchased) {
       await t.rollback();
       return res.status(400).json({ 
-        message: "Bạn chỉ có thể đánh giá sản phẩm đã mua" 
+        message: "Bạn chỉ có thể đánh giá sản phẩm đã đặt hàng" 
       });
     }
 
@@ -57,6 +65,38 @@ exports.createReview = async (req, res) => {
       order_id: orderId || null
     }, { transaction: t });
 
+    // Reward on review: either voucher or points
+    let reward = null;
+    // Simple rule: 50% chance voucher, else +50 points
+    const rewardVoucher = Math.random() < 0.5;
+    if (rewardVoucher) {
+      const code = `RVW${Date.now().toString(36).toUpperCase()}${Math.floor(Math.random()*1e3)}`;
+      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      const voucher = await db.Voucher.create({
+        user_id: userId,
+        code,
+        discount_type: "fixed",
+        discount_value: 10000, // 10k VND off
+        min_order_total: 50000,
+        expires_at: expiresAt,
+        description: "Quà tặng đánh giá sản phẩm"
+      }, { transaction: t });
+      reward = { type: "voucher", voucher };
+    } else {
+      const user = await db.User.findByPk(userId, { transaction: t, lock: true });
+      const addPoints = 50;
+      await user.increment('loyalty_points', { by: addPoints, transaction: t });
+      await user.reload({ transaction: t });
+      await db.LoyaltyPoint.create({
+        user_id: userId,
+        points: user.loyalty_points,
+        transaction_type: "earned",
+        amount: addPoints,
+        description: "Thưởng đánh giá sản phẩm"
+      }, { transaction: t });
+      reward = { type: "points", amount: addPoints };
+    }
+
     await t.commit();
 
     // Lấy thông tin đánh giá đầy đủ
@@ -69,7 +109,8 @@ exports.createReview = async (req, res) => {
 
     return res.json({
       message: "Đánh giá thành công",
-      review: fullReview
+      review: fullReview,
+      reward
     });
 
   } catch (err) {

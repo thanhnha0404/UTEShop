@@ -9,6 +9,8 @@ import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/free-mode";
 import "swiper/css/thumbs";
+import ProductReviews from "../components/ProductReviews";
+import { getFavorites, addFavorite, removeFavorite } from "../services/api.services";
 
 function normalizeImages(imageUrls) {
   if (Array.isArray(imageUrls)) return imageUrls;
@@ -24,6 +26,8 @@ export default function ProductDetailPage() {
   const [thumbsSwiper, setThumbsSwiper] = useState(null);
   const [qty, setQty] = useState(1);
   const navigate = useNavigate();
+  const [userOrders, setUserOrders] = useState([]);
+  const [isFavorite, setIsFavorite] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -31,6 +35,27 @@ export default function ProductDetailPage() {
       setProduct(data);
       // reset thumbs when product changes
       setThumbsSwiper(null);
+    })();
+  }, [id]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const token = getToken();
+        if (!token) return;
+        const res = await fetch(`http://localhost:8080/api/orders?status=all&page=1&limit=100`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setUserOrders(data.orders || []);
+        }
+        const favs = await getFavorites();
+        if (favs.success) {
+          const has = (favs.data.favorites || []).some(f => f.drink?.id === Number(id));
+          setIsFavorite(has);
+        }
+      } catch (_) {}
     })();
   }, [id]);
 
@@ -78,7 +103,30 @@ export default function ProductDetailPage() {
       </div>
 
       <div>
-        <h1 className="text-2xl font-bold mb-2">{product.name}</h1>
+        <div className="flex items-start justify-between mb-2">
+          <h1 className="text-2xl font-bold">{product.name}</h1>
+          <button
+            onClick={async () => {
+              try {
+                const token = getToken();
+                if (!token) { navigate('/login'); return; }
+                if (isFavorite) {
+                  const res = await removeFavorite(product.id);
+                  if (res.success) setIsFavorite(false);
+                } else {
+                  const res = await addFavorite(product.id);
+                  if (res.success) setIsFavorite(true);
+                }
+              } catch (e) {
+                alert(e?.response?.data?.message || e?.message || 'Lỗi yêu thích');
+              }
+            }}
+            className={`ml-3 p-2 rounded-full ${isFavorite ? 'bg-red-500 text-white' : 'bg-gray-100 text-red-500'}`}
+            title={isFavorite ? 'Bỏ yêu thích' : 'Thêm yêu thích'}
+          >
+            {isFavorite ? '❤️' : '🤍'}
+          </button>
+        </div>
         {product.category && (
           <p className="text-sm text-gray-500 mb-3">Danh mục: {product.category.name}</p>
         )}
@@ -141,6 +189,9 @@ export default function ProductDetailPage() {
         <div className="mt-6 text-gray-700 whitespace-pre-line">
           {product.description}
         </div>
+      </div>
+      <div className="md:col-span-2">
+        <ProductReviews drinkId={Number(id)} userOrders={userOrders} />
       </div>
     </div>
   );

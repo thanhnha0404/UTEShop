@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { getAllDrinks, getCategories, addToCart } from "../services/product.services";
+import { getFavorites, addFavorite, removeFavorite } from "../services/api.services";
 import Modal from "../components/Modal";
 import { getToken } from "../utils/authStorage";
 
-function DrinkCard({ drink }) {
+function DrinkCard({ drink, favoritesMap, onToggleFavorite }) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const isFav = !!favoritesMap[drink.id];
   return (
     <Link to={`/drink/${drink.id}`} className="bg-white rounded-xl shadow hover:shadow-lg transition overflow-hidden">
       <div className="relative">
@@ -16,6 +18,13 @@ function DrinkCard({ drink }) {
             -{Math.round(((drink.price - drink.salePrice) / drink.price) * 100)}%
           </span>
         )}
+        <button
+          onClick={(e) => { e.preventDefault(); onToggleFavorite(drink.id, isFav); }}
+          className={`absolute top-2 right-2 p-2 rounded-full ${isFav ? 'bg-red-500 text-white' : 'bg-white text-red-500'} shadow`}
+          title={isFav ? 'Bỏ yêu thích' : 'Thêm yêu thích'}
+        >
+          {isFav ? '❤️' : '🤍'}
+        </button>
       </div>
       <div className="p-4">
         <h3 className="font-semibold text-lg mb-2 line-clamp-2 min-h-[48px]">{drink.name}</h3>
@@ -108,6 +117,7 @@ function CategoryFilter({ categories, selectedCategory, onCategoryChange }) {
 }
 
 export default function DrinksPage() {
+  const navigate = useNavigate();
   const [drinks, setDrinks] = useState([]);
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -116,6 +126,7 @@ export default function DrinksPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
+  const [favoritesMap, setFavoritesMap] = useState({});
 
   const loadDrinks = async (page = 1, categoryId = null, append = false) => {
     try {
@@ -153,6 +164,16 @@ export default function DrinksPage() {
   useEffect(() => {
     loadCategories();
     loadDrinks(1, null);
+    (async () => {
+      try {
+        const res = await getFavorites();
+        if (res.success) {
+          const map = {};
+          (res.data.favorites || []).forEach(f => { if (f.drink?.id) map[f.drink.id] = true; });
+          setFavoritesMap(map);
+        }
+      } catch (_) {}
+    })();
   }, []);
 
   const handleCategoryChange = (categoryId) => {
@@ -163,6 +184,26 @@ export default function DrinksPage() {
 
   const handleLoadMore = () => {
     loadDrinks(currentPage + 1, selectedCategory, true);
+  };
+
+  const onToggleFavorite = async (drinkId, isFav) => {
+    try {
+      if (!getToken()) { navigate('/login'); return; }
+      // Optimistic
+      setFavoritesMap(prev => ({ ...prev, [drinkId]: !isFav }));
+      if (!isFav) {
+        const res = await addFavorite(drinkId);
+        if (!res.success) throw new Error(res.error);
+      } else {
+        const res = await removeFavorite(drinkId);
+        if (!res.success) throw new Error(res.error);
+      }
+      window.dispatchEvent(new Event('favorites:updated'));
+    } catch (e) {
+      // revert
+      setFavoritesMap(prev => ({ ...prev, [drinkId]: isFav }));
+      window.dispatchEvent(new CustomEvent('toast:show', { detail: { message: 'Không thể cập nhật yêu thích. Vui lòng thử lại.', type: 'error' } }));
+    }
   };
 
   if (loading) {
@@ -197,7 +238,7 @@ export default function DrinksPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {drinks.map((drink) => (
-          <DrinkCard key={drink.id} drink={drink} />
+          <DrinkCard key={drink.id} drink={drink} favoritesMap={favoritesMap} onToggleFavorite={onToggleFavorite} />
         ))}
       </div>
 

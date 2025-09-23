@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { getUser } from "../utils/authStorage";
 import Modal from "./Modal";
+import { getUserVouchers, getFavorites } from "../services/api.services";
 
 function formatDateToDDMMYYYY(isoDate) {
   if (!isoDate) return "";
@@ -25,6 +26,8 @@ function UserProfile() {
     email: "",
   });
   const [showSuccess, setShowSuccess] = useState(false);
+  const [vouchers, setVouchers] = useState([]);
+  const [favorites, setFavorites] = useState([]);
 
   useEffect(() => {
     const load = async () => {
@@ -68,6 +71,25 @@ function UserProfile() {
         setErrorMessage("");
         setIsLoading(false);
       }
+
+      try {
+        const res = await getUserVouchers();
+        if (res.success) setVouchers(res.data.vouchers || []);
+      } catch (_) {}
+
+      try {
+        const favRes = await getFavorites();
+        if (favRes.success) setFavorites(favRes.data.favorites || []);
+      } catch (_) {}
+
+      const refreshFavs = async () => {
+        try {
+          const favRes = await getFavorites();
+          if (favRes.success) setFavorites(favRes.data.favorites || []);
+        } catch (_) {}
+      };
+      window.addEventListener('favorites:updated', refreshFavs);
+      return () => window.removeEventListener('favorites:updated', refreshFavs);
     };
 
     load();
@@ -214,6 +236,56 @@ function UserProfile() {
           >
             Cập nhật thông tin
           </button>
+        </div>
+
+        {/* Vouchers */}
+        <div className="mt-8 bg-white/10 rounded-2xl p-6 border border-white/20">
+          <h3 className="text-white text-xl font-semibold mb-4">Voucher của bạn</h3>
+          {vouchers.length === 0 ? (
+            <div className="text-white/80">Chưa có voucher</div>
+          ) : (
+            <div className="grid md:grid-cols-2 gap-4">
+              {vouchers.map(v => (
+                <div key={v.id} className="bg-white/20 rounded-xl p-4 text-white">
+                  <div className="flex items-center justify-between">
+                    <div className="text-lg font-bold">{v.code}</div>
+                    <div className="text-sm bg-green-500/20 text-green-200 px-2 py-1 rounded">
+                      {v.discount_type === 'percent' ? `${v.discount_value}%` : `${Number(v.discount_value).toLocaleString()}₫`}
+                    </div>
+                  </div>
+                  {v.description && (
+                    <div className="text-white/80 mt-1 text-sm">{v.description}</div>
+                  )}
+                  <div className="mt-2 text-xs text-white/70">
+                    {v.min_order_total ? `ĐH tối thiểu: ${Number(v.min_order_total).toLocaleString()}₫` : 'Không yêu cầu đơn tối thiểu'}
+                  </div>
+                  <div className="text-xs text-white/70">
+                    HSD: {v.expires_at ? new Date(v.expires_at).toLocaleDateString('vi-VN') : 'Không thời hạn'}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Favorites */}
+        <div className="mt-8 bg-white/10 rounded-2xl p-6 border border-white/20">
+          <h3 className="text-white text-xl font-semibold mb-4">Sản phẩm yêu thích</h3>
+          {favorites.length === 0 ? (
+            <div className="text-white/80">Chưa có sản phẩm yêu thích</div>
+          ) : (
+            <div className="grid md:grid-cols-2 gap-4">
+              {favorites.map(f => (
+                <div key={f.id} className="bg-white/20 rounded-xl p-4 text-white flex items-center gap-3">
+                  <img src={f.drink?.image_url || '/logo192.png'} alt={f.drink?.name} className="w-16 h-16 rounded object-cover" />
+                  <div>
+                    <div className="font-semibold">{f.drink?.name}</div>
+                    <div className="text-sm text-white/80">{Number(f.drink?.price || 0).toLocaleString()}₫</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         <Modal
           open={showSuccess}

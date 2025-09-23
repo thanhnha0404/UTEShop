@@ -15,4 +15,7 @@ router.get("/history", loyaltyController.getLoyaltyHistory);
 // Tính toán xu có thể sử dụng cho đơn hàng
 router.post("/calculate", loyaltyController.calculateLoyaltyUsage);
 
+// Vouchers
+router.get("/vouchers", loyaltyController.getUserVouchers);
+
 module.exports = router;

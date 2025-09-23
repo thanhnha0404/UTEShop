@@ -17,6 +17,7 @@ import CheckoutPage from "./pages/CheckoutPage";
 import OrdersPage from "./pages/OrdersPage";
 import OrderDetailPage from "./pages/OrderDetailPage";
 import CartPage from "./pages/CartPage";
+import FavoritesPage from "./pages/FavoritesPage";
 
 function AppRoutes() {
   const location = useLocation();
@@ -35,6 +36,7 @@ function AppRoutes() {
         <Route path="/checkout" element={<CheckoutPage />} />
         <Route path="/orders" element={<OrdersPage />} />
         <Route path="/orders/:orderId" element={<OrderDetailPage />} />
+        <Route path="/favorites" element={<FavoritesPage />} />
 
         {/* Các routes */}
         <Route path="/register" element={<RegisterPage />} />

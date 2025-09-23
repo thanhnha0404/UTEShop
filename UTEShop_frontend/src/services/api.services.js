@@ -60,6 +60,86 @@ export const calculateLoyaltyUsage = async (orderTotal) => {
   }
 };
 
+// Voucher APIs
+export const getUserVouchers = async () => {
+  try {
+    const token = getToken();
+    const response = await axios.get(`${API_URL}/loyalty/vouchers`, {
+      withCredentials: true,
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return { success: true, data: response.data };
+  } catch (error) {
+    return { success: false, error: error.response?.data?.message || 'Lỗi khi lấy voucher' };
+  }
+};
+
+// Favorites APIs
+export const getFavorites = async () => {
+  try {
+    const token = getToken();
+    const response = await axios.get(`${API_URL}/favorites`, {
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+    });
+    return { success: true, data: response.data };
+  } catch (error) {
+    console.error('getFavorites error:', error?.response || error);
+    return { success: false, error: error.response?.data?.message || 'Lỗi khi lấy danh sách yêu thích' };
+  }
+};
+
+export const addFavorite = async (drinkId) => {
+  try {
+    const token = getToken();
+    const response = await axios.post(`${API_URL}/favorites/toggle`, { drinkId }, {
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+    });
+    return { success: true, data: response.data };
+  } catch (error) {
+    // Fallback for servers without /toggle route
+    if (error?.response?.status === 404) {
+      try {
+        const token = getToken();
+        const res = await axios.post(`${API_URL}/favorites`, { drinkId }, {
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+        });
+        return { success: true, data: { action: 'added', ...(res.data || {}) } };
+      } catch (err2) {
+        console.error('addFavorite fallback error:', err2?.response || err2);
+        return { success: false, error: err2.response?.data?.message || 'Lỗi khi thêm yêu thích' };
+      }
+    }
+    console.error('addFavorite error:', error?.response || error);
+    return { success: false, error: error.response?.data?.message || 'Lỗi khi thêm yêu thích' };
+  }
+};
+
+export const removeFavorite = async (drinkId) => {
+  try {
+    const token = getToken();
+    const response = await axios.post(`${API_URL}/favorites/toggle`, { drinkId }, {
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+    });
+    return { success: true, data: response.data };
+  } catch (error) {
+    // Fallback for servers without /toggle route
+    if (error?.response?.status === 404) {
+      try {
+        const token = getToken();
+        const res = await axios.delete(`${API_URL}/favorites/${drinkId}`, {
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+        });
+        return { success: true, data: { action: 'removed', ...(res.data || {}) } };
+      } catch (err2) {
+        console.error('removeFavorite fallback error:', err2?.response || err2);
+        return { success: false, error: err2.response?.data?.message || 'Lỗi khi xóa yêu thích' };
+      }
+    }
+    console.error('removeFavorite error:', error?.response || error);
+    return { success: false, error: error.response?.data?.message || 'Lỗi khi xóa yêu thích' };
+  }
+};
+
 // Review APIs
 export const createReview = async (drinkId, rating, comment, orderId) => {
   try {

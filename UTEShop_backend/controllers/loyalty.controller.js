@@ -8,7 +8,8 @@ exports.getUserLoyaltyPoints = async (req, res) => {
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
     const user = await db.User.findByPk(userId, {
-      attributes: ["id", "fullName", "loyalty_points"]
+      attributes: ["id", "fullName", "loyalty_points"],
+      include: [{ model: db.Voucher, as: "vouchers", attributes: ["id", "code", "discount_type", "discount_value", "min_order_total", "expires_at", "used_at", "description", "created_at"] }]
     });
 
     if (!user) {
@@ -19,6 +20,7 @@ exports.getUserLoyaltyPoints = async (req, res) => {
       userId: user.id,
       userName: user.fullName,
       currentPoints: user.loyalty_points,
+      vouchers: (user.vouchers || []).filter(v => !v.used_at && (!v.expires_at || new Date(v.expires_at) > new Date())),
       conversionRate: {
         vndToPoints: "20,000 VNĐ = 100 xu",
         pointsToVnd: "1 xu = 1 VNĐ"
@@ -84,6 +86,26 @@ exports.getLoyaltyHistory = async (req, res) => {
   } catch (err) {
     return res.status(500).json({
       message: "Lỗi khi lấy lịch sử xu",
+      error: err?.message || String(err)
+    });
+  }
+};
+
+// Lấy danh sách voucher của user
+exports.getUserVouchers = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const vouchers = await db.Voucher.findAll({
+      where: { user_id: userId },
+      order: [["created_at", "DESC"]]
+    });
+
+    return res.json({ vouchers });
+  } catch (err) {
+    return res.status(500).json({
+      message: "Lỗi khi lấy danh sách voucher",
       error: err?.message || String(err)
     });
   }

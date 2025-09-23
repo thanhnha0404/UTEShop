@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { getProductReviews, createReview, updateReview, deleteReview } from '../services/api.services';
 import { getUser } from '../utils/authStorage';
 
@@ -15,11 +15,7 @@ const ProductReviews = ({ drinkId, userOrders = [] }) => {
   const user = getUser();
   const userReview = reviews.find(review => review.user_id === user?.id);
 
-  useEffect(() => {
-    fetchReviews();
-  }, [drinkId, selectedRating]);
-
-  const fetchReviews = async () => {
+  const fetchReviews = useCallback(async () => {
     setLoading(true);
     try {
       const result = await getProductReviews(drinkId, 1, 10, selectedRating);
@@ -32,7 +28,13 @@ const ProductReviews = ({ drinkId, userOrders = [] }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [drinkId, selectedRating]);
+
+  useEffect(() => {
+    fetchReviews();
+  }, [fetchReviews]);
+
+  
 
   const handleSubmitReview = async () => {
     if (!reviewForm.rating || !reviewForm.comment.trim()) {
@@ -132,8 +134,9 @@ const ProductReviews = ({ drinkId, userOrders = [] }) => {
     );
   };
 
-  // Check if user has purchased this specific product
+  // Check if user has at least a pending or completed order containing this product
   const hasPurchasedProduct = userOrders.some(order => 
+    ['pending','confirmed','preparing','shipping','delivered'].includes(order.status) &&
     order.orderItems?.some(item => 
       item.drink_id === drinkId || item.drink?.id === drinkId
     )
@@ -191,7 +194,7 @@ const ProductReviews = ({ drinkId, userOrders = [] }) => {
             <button
               disabled
               className="px-4 py-2 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed"
-              title={!user ? "Bạn cần đăng nhập để đánh giá" : !hasPurchasedProduct ? "Bạn cần mua sản phẩm này trước khi đánh giá" : "Không thể đánh giá"}
+              title={!user ? "Bạn cần đăng nhập để đánh giá" : !hasPurchasedProduct ? "Bạn chỉ có thể đánh giá sau khi đơn hàng đã giao thành công" : "Không thể đánh giá"}
             >
               Viết đánh giá
             </button>
