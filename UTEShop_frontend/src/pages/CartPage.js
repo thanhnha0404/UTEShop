@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { getMyCart, updateCartItem, removeFromCart } from "../services/product.services";
+import { getMyCart, updateCartItem, removeFromCart, getMyVouchers } from "../services/product.services";
 import { getToken } from "../utils/authStorage";
 import { useNavigate } from "react-router-dom";
 
@@ -7,6 +7,9 @@ export default function CartPage() {
   const navigate = useNavigate();
   const [items, setItems] = useState([]);
   const [selected, setSelected] = useState({}); // drinkId -> boolean
+  const [voucherOpen, setVoucherOpen] = useState(false);
+  const [vouchers, setVouchers] = useState([]);
+  const [appliedVoucher, setAppliedVoucher] = useState(null);
   const token = getToken();
 
   useEffect(() => {
@@ -32,6 +35,18 @@ export default function CartPage() {
       return sum + Number(it?.drink?.salePrice || it?.drink?.price || 0) * it.quantity;
     }, 0);
   }, [items, selected]);
+
+  const discount = useMemo(() => {
+    if (!appliedVoucher) return 0;
+    const minTotal = Number(appliedVoucher.min_order_total || 0);
+    if (subtotal < minTotal) return 0;
+    if (appliedVoucher.discount_type === 'percent') {
+      const percent = Number(appliedVoucher.discount_value || 0);
+      return Math.floor((subtotal * percent) / 100);
+    }
+    return Math.min(Number(appliedVoucher.discount_value || 0), subtotal);
+  }, [appliedVoucher, subtotal]);
+  const grandTotal = Math.max(0, subtotal - discount);
 
   const allChecked = useMemo(() => {
     if (items.length === 0) return false;
@@ -113,9 +128,65 @@ export default function CartPage() {
       </div>
       <div className="bg-white rounded-xl border h-fit p-4">
         <div className="font-bold mb-3">THÀNH TIỀN</div>
+        <div className="mb-2">
+          <div className="flex justify-between mb-2">
+            <span>Tổng tạm tính</span>
+            <span className="font-semibold">{subtotal.toLocaleString()}₫</span>
+          </div>
+          <div className="flex justify-between mb-2">
+            <span className="flex items-center gap-2">
+              Khuyến mãi {appliedVoucher ? `(${appliedVoucher.code})` : "(chưa chọn)"}
+            </span>
+            <button
+              className="text-indigo-600 hover:underline"
+              onClick={async () => {
+                try {
+                  if (!voucherOpen) {
+                    const res = await getMyVouchers({ token });
+                    setVouchers(Array.isArray(res.vouchers) ? res.vouchers : []);
+                  }
+                  setVoucherOpen(v => !v);
+                } catch (err) {
+                  alert(err?.response?.data?.message || err?.message || 'Lỗi tải voucher');
+                }
+              }}
+            >
+              {voucherOpen ? 'Đóng' : 'Xem thêm'}
+            </button>
+          </div>
+          {voucherOpen && (
+            <div className="max-h-64 overflow-auto bg-yellow-50 rounded-lg p-3 mb-2">
+              {vouchers.length === 0 ? (
+                <div className="text-sm text-gray-600">Không có voucher khả dụng</div>
+              ) : (
+                vouchers.map(v => (
+                  <div key={v.id} className="flex items-center justify-between p-3 bg-yellow-100 rounded mb-2">
+                    <div>
+                      <div className="font-semibold">{v.code}</div>
+                      <div className="text-sm text-gray-600">
+                        {v.discount_type === 'percent' ? `Giảm ${Number(v.discount_value).toLocaleString()}%` : `Giảm ${Number(v.discount_value).toLocaleString()}₫`}
+                        {Number(v.min_order_total || 0) > 0 ? ` cho đơn từ ${Number(v.min_order_total).toLocaleString()}₫` : ''}
+                      </div>
+                    </div>
+                    <button
+                      className="px-3 py-1 bg-indigo-600 text-white rounded-lg"
+                      onClick={() => { setAppliedVoucher(v); try { sessionStorage.setItem('applied_voucher', JSON.stringify(v)); } catch(_){} }}
+                    >
+                      Áp dụng
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
         <div className="flex justify-between mb-2">
-          <span>Tổng số tiền</span>
-          <span className="font-semibold">{subtotal.toLocaleString()}₫</span>
+          <span>Giảm giá</span>
+          <span className="font-semibold text-red-600">- {discount.toLocaleString()}₫</span>
+        </div>
+        <div className="flex justify-between mb-2">
+          <span className="font-semibold">Tổng số tiền</span>
+          <span className="font-bold">{grandTotal.toLocaleString()}₫</span>
         </div>
         <button onClick={() => navigate('/checkout')} className="w-full mt-3 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 rounded-lg">THANH TOÁN</button>
       </div>

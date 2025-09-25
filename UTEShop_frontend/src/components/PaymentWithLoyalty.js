@@ -4,7 +4,8 @@ import { calculateLoyaltyUsage } from '../services/api.services';
 const PaymentWithLoyalty = ({ 
   cartItems = [], 
   onCheckout, 
-  loading = false 
+  loading = false,
+  voucherDiscountAmount = 0,
 }) => {
   const [loyaltyData, setLoyaltyData] = useState({
     currentPoints: 0,
@@ -20,8 +21,9 @@ const PaymentWithLoyalty = ({
     return sum + (price * item.quantity);
   }, 0);
   const shippingFee = cartItems.length > 0 ? 20000 : 0;
-  const totalBeforeDiscount = subtotal + shippingFee;
-  const finalTotal = Math.max(0, totalBeforeDiscount - loyaltyPointsUsed);
+  const voucherDiscount = Number(voucherDiscountAmount || 0);
+  const totalBeforeDiscount = subtotal + shippingFee; // trước voucher/xu
+  const finalTotal = Math.max(0, subtotal + shippingFee - voucherDiscount - loyaltyPointsUsed);
 
   useEffect(() => {
     if (totalBeforeDiscount > 0) {
@@ -72,6 +74,7 @@ const PaymentWithLoyalty = ({
       loyaltyPointsUsed,
       subtotal,
       shippingFee,
+      voucherDiscount,
       total: finalTotal,
       loyaltyPointsEarned: loyaltyData.pointsToEarn
     });
@@ -99,6 +102,11 @@ const PaymentWithLoyalty = ({
         <div className="flex justify-between items-center py-2 border-b border-gray-200">
           <span className="text-gray-600">Phí vận chuyển:</span>
           <span className="font-medium">{formatCurrency(shippingFee)}</span>
+        </div>
+
+        <div className="flex justify-between items-center py-2 border-b border-gray-200">
+          <span className="text-gray-600">Voucher:</span>
+          <span className="font-medium text-red-600">- {formatCurrency(voucherDiscount)}</span>
         </div>
         
         <div className="flex justify-between items-center py-2 border-b border-gray-200">

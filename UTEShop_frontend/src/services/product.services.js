@@ -47,6 +47,11 @@ export const removeFromCart = ({ drinkId, token }) =>
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,
   }).then(r => r.data);
 
+export const getMyVouchers = ({ token }) =>
+  axios.get(`${API_BASE_URL}/vouchers/my`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  }).then(r => r.data);
+
 export const checkoutCOD = ({ token }) =>
   axios.post(`${API_BASE_URL}/checkout/cod`, {}, {
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,

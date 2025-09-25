@@ -3,11 +3,12 @@ const User = require("./user.model");
 const Category = require("./category.model");
 const Drink = require("./drink.model");
 const CartItem = require("./cartitem.model");
+const Voucher = require("./voucher.model");
+const UserVoucher = require("./user_voucher.model");
 const Order = require("./order.model");
 const OrderItem = require("./orderitem.model");
 const Review = require("./review.model");
 const LoyaltyPoint = require("./loyaltypoint.model");
-const Voucher = require("./voucher.model");
 const Favorite = require("./favorite.model");
 
 (async () => {
@@ -26,6 +27,8 @@ db.User = User;
 db.Category = Category;
 db.Drink = Drink;
 db.CartItem = CartItem;
+db.Voucher = Voucher;
+db.UserVoucher = UserVoucher;
 db.Order = Order;
 db.OrderItem = OrderItem;
 db.Review = Review;
@@ -41,6 +44,10 @@ CartItem.belongsTo(User, { foreignKey: "user_id", as: "user" });
 CartItem.belongsTo(Drink, { foreignKey: "drink_id", as: "drink" });
 User.hasMany(CartItem, { foreignKey: "user_id", as: "cartItems" });
 Drink.hasMany(CartItem, { foreignKey: "drink_id", as: "cartItems" });
+
+// Voucher associations
+Voucher.belongsTo(User, { foreignKey: "user_id", as: "user" });
+User.hasMany(Voucher, { foreignKey: "user_id", as: "vouchers" });
 
 // Order associations
 Order.belongsTo(User, { foreignKey: "user_id", as: "user" });
@@ -64,10 +71,6 @@ LoyaltyPoint.belongsTo(User, { foreignKey: "user_id", as: "user" });
 LoyaltyPoint.belongsTo(Order, { foreignKey: "earned_from_order_id", as: "earnedFromOrder" });
 LoyaltyPoint.belongsTo(Order, { foreignKey: "used_in_order_id", as: "usedInOrder" });
 User.hasMany(LoyaltyPoint, { foreignKey: "user_id", as: "loyaltyPoints" });
-
-// Voucher associations
-Voucher.belongsTo(User, { foreignKey: "user_id", as: "user" });
-User.hasMany(Voucher, { foreignKey: "user_id", as: "vouchers" });
 
 // Favorite associations
 Favorite.belongsTo(User, { foreignKey: "user_id", as: "user" });
