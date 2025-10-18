@@ -6,12 +6,15 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js",
-    "seed": "node ./seeds/seed.js"
+    "seed": "node ./seeds/seed.js",
+    "seed:sample": "node ./seeds/sample-data.js",
+    "seed:advanced": "node ./seeds/advanced-sample-data.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@faker-js/faker": "^10.1.0",
     "axios": "^1.12.2",
     "bcrypt": "^5.1.1",
     "body-parser": "^2.2.0",

@@ -179,6 +179,13 @@ export default function Header() {
                         >
                           Danh sách yêu thích
                         </Link>
+                        <Link
+                          to="/statistics"
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          onClick={() => setShowUserMenu(false)}
+                        >
+                          Thống kê & Doanh thu
+                        </Link>
                         <hr className="my-1" />
                         <button
                           onClick={() => {
