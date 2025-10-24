@@ -13,12 +13,14 @@ import DrinksPage from "./pages/DrinksPage";
 import DrinkDetailPage from "./pages/DrinkDetailPage";
 import Header from "./components/Header";
 import Toast from "./components/Toast";
+import ToastNotification from "./components/ToastNotification";
 import CheckoutPage from "./pages/CheckoutPage";
 import OrdersPage from "./pages/OrdersPage";
 import OrderDetailPage from "./pages/OrderDetailPage";
 import CartPage from "./pages/CartPage";
 import FavoritesPage from "./pages/FavoritesPage";
 import StatisticsPage from "./pages/StatisticsPage";
+import NotificationsPage from "./pages/NotificationsPage";
 
 function AppRoutes() {
   const location = useLocation();
@@ -27,6 +29,7 @@ function AppRoutes() {
     <>
       {!hideHeader && <Header />}
       <Toast />
+      <ToastNotification />
       <Routes>
         {/* Điều hướng mặc định */}
         <Route path="/" element={<HomePage />} />
@@ -39,6 +42,7 @@ function AppRoutes() {
         <Route path="/orders/:orderId" element={<OrderDetailPage />} />
         <Route path="/favorites" element={<FavoritesPage />} />
         <Route path="/statistics" element={<StatisticsPage />} />
+        <Route path="/notifications" element={<NotificationsPage />} />
 
         {/* Các routes */}
         <Route path="/register" element={<RegisterPage />} />
