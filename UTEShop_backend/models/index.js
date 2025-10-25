@@ -10,6 +10,9 @@ const OrderItem = require("./orderitem.model");
 const Review = require("./review.model");
 const LoyaltyPoint = require("./loyaltypoint.model");
 const Favorite = require("./favorite.model");
+// const Notification = require("./notification.model");
+const Notification = require("./notification.model")(sequelize);
+
 
 (async () => {
   try {
@@ -34,6 +37,7 @@ db.OrderItem = OrderItem;
 db.Review = Review;
 db.LoyaltyPoint = LoyaltyPoint;
 db.Favorite = Favorite;
+db.Notification = Notification;
 
 // Associations
 Drink.belongsTo(Category, { foreignKey: "category_id", as: "category" });
@@ -78,5 +82,9 @@ Favorite.belongsTo(User, { foreignKey: "user_id", as: "user" });
 Favorite.belongsTo(Drink, { foreignKey: "drink_id", as: "drink" });
 User.hasMany(Favorite, { foreignKey: "user_id", as: "favorites" });
 Drink.hasMany(Favorite, { foreignKey: "drink_id", as: "favorites" });
+
+// Notification associations
+Notification.belongsTo(User, { foreignKey: "user_id", as: "user" });
+User.hasMany(Notification, { foreignKey: "user_id", as: "notifications" });
 
 module.exports = db;

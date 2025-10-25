@@ -4,6 +4,7 @@ import { getUser, clearAuth, getToken } from "../utils/authStorage";
 import { getMyCart } from "../services/product.services";
 import Modal from "./Modal";
 import LoyaltyWallet from "./LoyaltyWallet";
+import NotificationBell from "./NotificationBell";
 
 export default function Header() {
   const navigate = useNavigate();
@@ -123,6 +124,9 @@ export default function Header() {
 
             {isLoggedIn ? (
               <>
+                {/* Notification Bell */}
+                <NotificationBell />
+                
                 {/* Loyalty Wallet */}
                 <LoyaltyWallet />
                 

@@ -1,4 +1,6 @@
 const db = require("../models");
+const notificationService = require("../services/notification.service");
+const emailService = require("../services/email.service");
 
 // Tạo đánh giá sản phẩm
 exports.createReview = async (req, res) => {
@@ -82,6 +84,9 @@ exports.createReview = async (req, res) => {
         description: "Quà tặng đánh giá sản phẩm"
       }, { transaction: t });
       reward = { type: "voucher", voucher };
+      
+      // Lưu voucher data để tạo thông báo sau khi commit
+      reward = { type: "voucher", voucher, notificationData: voucher };
     } else {
       const user = await db.User.findByPk(userId, { transaction: t, lock: true });
       const addPoints = 50;
@@ -95,9 +100,56 @@ exports.createReview = async (req, res) => {
         description: "Thưởng đánh giá sản phẩm"
       }, { transaction: t });
       reward = { type: "points", amount: addPoints };
+      
+      // Lưu points data để tạo thông báo sau khi commit
+      const pointsData = {
+        amount: addPoints,
+        totalPoints: user.loyalty_points
+      };
+      reward = { type: "points", amount: addPoints, notificationData: pointsData };
     }
 
     await t.commit();
+
+    // Tạo thông báo cho user sau khi commit thành công
+    if (reward && reward.notificationData) {
+      try {
+        if (reward.type === "voucher") {
+          console.log('🔔 Creating voucher notification for user:', userId);
+          const notificationResult = await notificationService.createVoucherNotification(userId, reward.notificationData);
+          
+          if (notificationResult.success && global.io) {
+            console.log('📡 Sending real-time voucher notification to user:', userId);
+            await notificationService.sendRealTimeNotification(global.io, userId, notificationResult.notification);
+          }
+          
+          // Gửi email riêng
+          const user = await db.User.findByPk(userId);
+          if (user && user.email) {
+            console.log('📧 Sending voucher email to:', user.email);
+            await emailService.sendVoucherNotificationEmail(user.email, reward.notificationData);
+          }
+        } else if (reward.type === "points") {
+          console.log('🔔 Creating loyalty notification for user:', userId);
+          const notificationResult = await notificationService.createLoyaltyNotification(userId, reward.notificationData);
+          
+          if (notificationResult.success && global.io) {
+            console.log('📡 Sending real-time loyalty notification to user:', userId);
+            await notificationService.sendRealTimeNotification(global.io, userId, notificationResult.notification);
+          }
+          
+          // Gửi email riêng
+          const user = await db.User.findByPk(userId);
+          if (user && user.email) {
+            console.log('📧 Sending loyalty email to:', user.email);
+            await emailService.sendLoyaltyNotificationEmail(user.email, reward.notificationData);
+          }
+        }
+      } catch (notificationError) {
+        console.error('Error creating user notification:', notificationError);
+        // Không throw error vì review đã tạo thành công
+      }
+    }
 
     // Lấy thông tin đánh giá đầy đủ
     const fullReview = await db.Review.findByPk(review.id, {
@@ -107,10 +159,41 @@ exports.createReview = async (req, res) => {
       ]
     });
 
+    // Tạo thông báo về đánh giá mới (cho admin hoặc shop owner) - CHỈ SAU KHI COMMIT
+    try {
+      const drink = await db.Drink.findByPk(drinkId);
+      if (drink) {
+        // Tạo thông báo cho admin (user_id = 1 hoặc admin user)
+        const adminUsers = await db.User.findAll({
+          where: { role: 'admin' },
+          attributes: ['id']
+        });
+        
+        for (const admin of adminUsers) {
+          const notificationResult = await notificationService.createReviewNotification(admin.id, {
+            drink_name: drink.name,
+            rating: rating,
+            comment: comment
+          });
+          
+          if (notificationResult.success && global.io) {
+            await notificationService.sendRealTimeNotification(global.io, admin.id, notificationResult.notification);
+          }
+        }
+      }
+    } catch (notificationError) {
+      console.error('Error creating review notification:', notificationError);
+      // Không throw error vì review đã tạo thành công
+    }
+
+    // Loại bỏ notificationData khỏi response
+    const cleanReward = { ...reward };
+    delete cleanReward.notificationData;
+
     return res.json({
       message: "Đánh giá thành công",
       review: fullReview,
-      reward
+      reward: cleanReward
     });
 
   } catch (err) {

@@ -1,5 +1,6 @@
 const db = require("../models");
 const { Op } = require("sequelize");
+const notificationService = require("../services/notification.service");
 
 // Tạo đơn hàng mới
 exports.createOrder = async (req, res) => {
@@ -218,6 +219,22 @@ exports.createOrder = async (req, res) => {
         notes: item.notes
       })) || []
     };
+
+    // Tạo thông báo cho user về đơn hàng mới
+    try {
+      const notificationResult = await notificationService.createOrderNotification(userId, {
+        id: order.id,
+        order_number: order.order_number,
+        total_amount: total
+      });
+      
+      if (notificationResult.success && global.io) {
+        await notificationService.sendRealTimeNotification(global.io, userId, notificationResult.notification);
+      }
+    } catch (notificationError) {
+      console.error('Error creating order notification:', notificationError);
+      // Không throw error vì đơn hàng đã tạo thành công
+    }
 
     return res.json({
       message: "Đặt hàng thành công",
@@ -576,6 +593,21 @@ exports.autoConfirmOrders = async () => {
         status: "confirmed",
         confirmed_at: new Date()
       });
+
+      // Tạo thông báo xác nhận đơn hàng
+      try {
+        const notificationResult = await notificationService.createOrderConfirmationNotification(order.user_id, {
+          id: order.id,
+          order_number: order.order_number,
+          total_amount: order.total_amount
+        });
+        
+        if (notificationResult.success && global.io) {
+          await notificationService.sendRealTimeNotification(global.io, order.user_id, notificationResult.notification);
+        }
+      } catch (notificationError) {
+        console.error('Error creating confirmation notification:', notificationError);
+      }
     }
 
     console.log(`✅ Tự động xác nhận ${orders.length} đơn hàng`);
@@ -584,38 +616,38 @@ exports.autoConfirmOrders = async () => {
   }
 };
 
-// Lấy danh sách đơn hàng của user
-exports.getUserOrders = async (req, res) => {
-  try {
-    const userId = req.user?.id;
-    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+// // Lấy danh sách đơn hàng của user
+// exports.getUserOrders = async (req, res) => {
+//   try {
+//     const userId = req.user?.id;
+//     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-    const orders = await db.Order.findAll({
-      where: { user_id: userId },
-      include: [
-        {
-          model: db.OrderItem,
-          as: "orderItems",
-          include: [
-            {
-              model: db.Drink,
-              as: "drink",
-              attributes: ["id", "name", "image_url"]
-            }
-          ]
-        }
-      ],
-      order: [["created_at", "DESC"]]
-    });
+//     const orders = await db.Order.findAll({
+//       where: { user_id: userId },
+//       include: [
+//         {
+//           model: db.OrderItem,
+//           as: "orderItems",
+//           include: [
+//             {
+//               model: db.Drink,
+//               as: "drink",
+//               attributes: ["id", "name", "image_url"]
+//             }
+//           ]
+//         }
+//       ],
+//       order: [["created_at", "DESC"]]
+//     });
 
-    return res.json({
-      orders: orders
-    });
+//     return res.json({
+//       orders: orders
+//     });
 
-  } catch (err) {
-    return res.status(500).json({
-      message: "Lỗi khi lấy danh sách đơn hàng",
-      error: err?.message || String(err)
-    });
-  }
-};
+//   } catch (err) {
+//     return res.status(500).json({
+//       message: "Lỗi khi lấy danh sách đơn hàng",
+//       error: err?.message || String(err)
+//     });
+//   }
+// };
