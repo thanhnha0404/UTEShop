@@ -33,7 +33,6 @@ db.Order = Order;
 db.OrderItem = OrderItem;
 db.Review = Review;
 db.LoyaltyPoint = LoyaltyPoint;
-db.Voucher = Voucher;
 db.Favorite = Favorite;
 
 // Associations
@@ -46,8 +45,10 @@ User.hasMany(CartItem, { foreignKey: "user_id", as: "cartItems" });
 Drink.hasMany(CartItem, { foreignKey: "drink_id", as: "cartItems" });
 
 // Voucher associations
-Voucher.belongsTo(User, { foreignKey: "user_id", as: "user" });
-User.hasMany(Voucher, { foreignKey: "user_id", as: "vouchers" });
+UserVoucher.belongsTo(User, { foreignKey: "user_id", as: "user" });
+UserVoucher.belongsTo(Voucher, { foreignKey: "voucher_id", as: "voucher" });
+User.belongsToMany(Voucher, { through: UserVoucher, foreignKey: "user_id", otherKey: "voucher_id", as: "vouchers" });
+Voucher.belongsToMany(User, { through: UserVoucher, foreignKey: "voucher_id", otherKey: "user_id", as: "users" });
 
 // Order associations
 Order.belongsTo(User, { foreignKey: "user_id", as: "user" });

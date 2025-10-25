@@ -42,17 +42,20 @@ const getRevenueStatistics = async (req, res) => {
         groupBy = 'DATE(created_at)';
     }
 
-    const revenueStats = await Order.findAll({
-      attributes: [
-        [sequelize.fn('DATE_FORMAT', sequelize.col('created_at'), dateFormat), 'period'],
-        [sequelize.fn('COUNT', sequelize.col('id')), 'orderCount'],
-        [sequelize.fn('SUM', sequelize.col('total')), 'totalRevenue'],
-        [sequelize.fn('AVG', sequelize.col('total')), 'averageOrderValue']
-      ],
-      where: whereClause,
-      group: [sequelize.literal(groupBy)],
-      order: [[sequelize.literal('period'), 'ASC']],
-      raw: true
+    const revenueStats = await sequelize.query(`
+      SELECT 
+        DATE_FORMAT(created_at, '${dateFormat}') AS period,
+        COUNT(id) AS orderCount,
+        SUM(total) AS totalRevenue,
+        AVG(total) AS averageOrderValue
+      FROM orders 
+      WHERE status = 'delivered' 
+        AND created_at >= :startDate
+      GROUP BY DATE_FORMAT(created_at, '${dateFormat}')
+      ORDER BY period ASC
+    `, {
+      replacements: { startDate: whereClause.created_at[Op.gte] },
+      type: sequelize.QueryTypes.SELECT
     });
 
     // Calculate totals

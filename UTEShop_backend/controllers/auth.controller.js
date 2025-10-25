@@ -38,4 +38,25 @@ exports.login = async (req, res) => {
   }
 };
 
+// Get current user info
+exports.getCurrentUser = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const user = await User.findByPk(userId, {
+      attributes: ['id', 'fullName', 'username', 'email', 'role', 'status', 'loyalty_points']
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.json({ user });
+  } catch (err) {
+    console.error("Get current user error:", err);
+    return res.status(500).json({ message: "Error getting user info", error: err?.message || String(err) });
+  }
+};
+
 

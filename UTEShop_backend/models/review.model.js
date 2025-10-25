@@ -43,6 +43,11 @@ const Review = sequelize.define("Review", {
       key: "id",
     },
   },
+  is_hidden: {
+    type: DataTypes.BOOLEAN,
+    allowNull: true,
+    defaultValue: false,
+  },
 }, {
   tableName: "reviews",
   timestamps: true,

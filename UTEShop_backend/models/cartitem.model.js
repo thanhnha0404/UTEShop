@@ -2,10 +2,29 @@ const { DataTypes } = require("sequelize");
 const { sequelize } = require("../config/db.config");
 
 const CartItem = sequelize.define("CartItem", {
-  user_id: { type: DataTypes.INTEGER, allowNull: false },
-  drink_id: { type: DataTypes.INTEGER, allowNull: false },
-  quantity: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 1 },
-  checked: { type: DataTypes.BOOLEAN, defaultValue: true },
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true,
+  },
+  user_id: { 
+    type: DataTypes.INTEGER, 
+    allowNull: false 
+  },
+  drink_id: { 
+    type: DataTypes.INTEGER, 
+    allowNull: false 
+  },
+  quantity: { 
+    type: DataTypes.INTEGER, 
+    allowNull: false, 
+    defaultValue: 1 
+  },
+  checked: { 
+    type: DataTypes.BOOLEAN, 
+    allowNull: true,
+    defaultValue: true 
+  },
 }, {
   tableName: "cart_items",
   timestamps: true,

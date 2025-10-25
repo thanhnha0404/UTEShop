@@ -7,43 +7,57 @@ const Voucher = sequelize.define("Voucher", {
     primaryKey: true,
     autoIncrement: true,
   },
-  user_id: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    references: {
-      model: "users",
-      key: "id",
-    },
-  },
   code: {
-    type: DataTypes.STRING(32),
+    type: DataTypes.STRING(50),
     allowNull: false,
     unique: true,
   },
-  discount_type: {
-    type: DataTypes.ENUM("percent", "fixed"),
+  name: {
+    type: DataTypes.STRING(255),
     allowNull: false,
-    defaultValue: "fixed",
+  },
+  description: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
+  discount_type: {
+    type: DataTypes.ENUM("percentage", "fixed"),
+    allowNull: false,
   },
   discount_value: {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: false,
   },
-  min_order_total: {
+  min_order_amount: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: true,
+    defaultValue: 0.00,
+  },
+  max_discount_amount: {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: true,
   },
-  expires_at: {
-    type: DataTypes.DATE,
+  usage_limit: {
+    type: DataTypes.INTEGER,
     allowNull: true,
   },
-  used_at: {
-    type: DataTypes.DATE,
+  used_count: {
+    type: DataTypes.INTEGER,
     allowNull: true,
+    defaultValue: 0,
   },
-  description: {
-    type: DataTypes.STRING,
+  start_date: {
+    type: DataTypes.DATE,
+    allowNull: false,
+  },
+  end_date: {
+    type: DataTypes.DATE,
+    allowNull: false,
+  },
+  status: {
+    type: DataTypes.ENUM("active", "inactive", "expired"),
     allowNull: true,
+    defaultValue: "active",
   },
 }, {
   tableName: "vouchers",

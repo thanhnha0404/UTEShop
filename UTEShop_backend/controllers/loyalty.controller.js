@@ -9,7 +9,21 @@ exports.getUserLoyaltyPoints = async (req, res) => {
 
     const user = await db.User.findByPk(userId, {
       attributes: ["id", "fullName", "loyalty_points"],
-      include: [{ model: db.Voucher, as: "vouchers", attributes: ["id", "code", "discount_type", "discount_value", "min_order_total", "expires_at", "used_at", "description", "created_at"] }]
+      include: [{
+        model: db.Voucher,
+        as: "vouchers",
+        through: {
+          model: db.UserVoucher,
+          where: { status: 'active' },
+          attributes: ["used_at", "status"]
+        },
+        where: {
+          status: 'active',
+          start_date: { [db.Sequelize.Op.lte]: new Date() },
+          end_date: { [db.Sequelize.Op.gte]: new Date() }
+        },
+        attributes: ["id", "code", "name", "discount_type", "discount_value", "min_order_amount", "max_discount_amount", "end_date", "description"]
+      }]
     });
 
     if (!user) {
@@ -20,7 +34,7 @@ exports.getUserLoyaltyPoints = async (req, res) => {
       userId: user.id,
       userName: user.fullName,
       currentPoints: user.loyalty_points,
-      vouchers: (user.vouchers || []).filter(v => !v.used_at && (!v.expires_at || new Date(v.expires_at) > new Date())),
+      vouchers: (user.vouchers || []).filter(v => !v.UserVoucher?.used_at),
       conversionRate: {
         vndToPoints: "20,000 VNĐ = 100 xu",
         pointsToVnd: "1 xu = 1 VNĐ"
@@ -97,15 +111,42 @@ exports.getUserVouchers = async (req, res) => {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-    const vouchers = await db.Voucher.findAll({
-      where: { user_id: userId },
+    // Get user's vouchers through the UserVoucher junction table
+    const userVouchers = await db.UserVoucher.findAll({
+      where: { 
+        user_id: userId,
+        status: 'active'
+      },
+      include: [{
+        model: db.Voucher,
+        as: 'voucher',
+        where: {
+          status: 'active',
+          start_date: { [db.Sequelize.Op.lte]: new Date() },
+          end_date: { [db.Sequelize.Op.gte]: new Date() }
+        }
+      }],
       order: [["created_at", "DESC"]]
     });
+
+    const vouchers = userVouchers.map(uv => ({
+      id: uv.voucher.id,
+      code: uv.voucher.code,
+      name: uv.voucher.name,
+      discount_type: uv.voucher.discount_type,
+      discount_value: Number(uv.voucher.discount_value),
+      min_order_amount: uv.voucher.min_order_amount ? Number(uv.voucher.min_order_amount) : 0,
+      max_discount_amount: uv.voucher.max_discount_amount ? Number(uv.voucher.max_discount_amount) : null,
+      end_date: uv.voucher.end_date,
+      description: uv.voucher.description,
+      used_at: uv.used_at,
+      status: uv.status
+    }));
 
     return res.json({ vouchers });
   } catch (err) {
     return res.status(500).json({
-      message: "Lỗi khi lấy danh sách voucher",
+      message: "Không thể lấy danh sách voucher",
       error: err?.message || String(err)
     });
   }
