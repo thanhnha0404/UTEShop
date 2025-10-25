@@ -12,15 +12,18 @@ const LoyaltyWallet = () => {
 
   const fetchLoyaltyPoints = async () => {
     try {
+      console.log('🔄 Fetching loyalty points...');
       const response = await getUserLoyaltyPoints();
+      console.log('📊 Loyalty points response:', response);
       if (response.success) {
+        console.log('✅ Points loaded:', response.data.currentPoints);
         setPoints(response.data.currentPoints);
       } else {
-        console.error('Lỗi khi lấy thông tin xu:', response.error);
+        console.error('❌ Lỗi khi lấy thông tin xu:', response.error);
         setPoints(0);
       }
     } catch (error) {
-      console.error('Lỗi khi lấy thông tin xu:', error);
+      console.error('❌ Lỗi khi lấy thông tin xu:', error);
       setPoints(0);
     } finally {
       setLoading(false);

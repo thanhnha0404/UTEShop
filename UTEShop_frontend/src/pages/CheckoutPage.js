@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getMyCart, checkoutCOD, getMyVouchers } from "../services/product.services";
+import { validateVoucher } from "../services/api.services";
 import Modal from "../components/Modal";
 import { getToken } from "../utils/authStorage";
 import PaymentWithLoyalty from "../components/PaymentWithLoyalty";
@@ -13,6 +14,8 @@ export default function CheckoutPage() {
   const [voucherOpen, setVoucherOpen] = useState(false);
   const [vouchers, setVouchers] = useState([]);
   const [appliedVoucher, setAppliedVoucher] = useState(null);
+  const [voucherCode, setVoucherCode] = useState("");
+  const [voucherValidation, setVoucherValidation] = useState({ loading: false, error: null, valid: false });
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const token = getToken();
 
@@ -39,15 +42,64 @@ export default function CheckoutPage() {
   const shippingFee = items.length > 0 ? 20000 : 0;
   const voucherDiscount = useMemo(() => {
     if (!appliedVoucher) return 0;
-    const minTotal = Number(appliedVoucher.min_order_total || 0);
+    const minTotal = Number(appliedVoucher.min_order_amount || 0);
     if (subtotal < minTotal) return 0;
-    if (appliedVoucher.discount_type === 'percent') {
+    if (appliedVoucher.discount_type === 'percentage') {
       const percent = Number(appliedVoucher.discount_value || 0);
-      return Math.floor((subtotal * percent) / 100);
+      const discount = Math.floor((subtotal * percent) / 100);
+      const maxDiscount = appliedVoucher.max_discount_amount || Infinity;
+      return Math.min(discount, maxDiscount);
     }
     return Math.min(Number(appliedVoucher.discount_value || 0), subtotal);
   }, [appliedVoucher, subtotal]);
   const total = Math.max(0, subtotal + shippingFee - voucherDiscount);
+
+  // Voucher validation function
+  const validateVoucherCode = async (code) => {
+    if (!code.trim()) {
+      setVoucherValidation({ loading: false, error: null, valid: false });
+      setAppliedVoucher(null);
+      return;
+    }
+
+    setVoucherValidation({ loading: true, error: null, valid: false });
+    
+    try {
+      const result = await validateVoucher(code, subtotal);
+      if (result.success && result.data.valid) {
+        setAppliedVoucher(result.data.voucher);
+        setVoucherValidation({ loading: false, error: null, valid: true });
+      } else {
+        setAppliedVoucher(null);
+        setVoucherValidation({ 
+          loading: false, 
+          error: result.error || 'Voucher không hợp lệ', 
+          valid: false 
+        });
+      }
+    } catch (error) {
+      setAppliedVoucher(null);
+      setVoucherValidation({ 
+        loading: false, 
+        error: 'Lỗi khi xác thực voucher', 
+        valid: false 
+      });
+    }
+  };
+
+  // Handle voucher code input with debounce
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (voucherCode) {
+        validateVoucherCode(voucherCode);
+      } else {
+        setAppliedVoucher(null);
+        setVoucherValidation({ loading: false, error: null, valid: false });
+      }
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [voucherCode, subtotal]);
 
   const handleCheckout = async (paymentData) => {
     console.log('🚀 Starting checkout process...', { paymentData, token: !!token });
@@ -80,7 +132,8 @@ export default function CheckoutPage() {
         },
         credentials: 'include',
         body: JSON.stringify({
-          loyaltyPointsUsed: paymentData.loyaltyPointsUsed || 0
+          loyaltyPointsUsed: paymentData.loyaltyPointsUsed || 0,
+          voucherCode: appliedVoucher ? appliedVoucher.code : null
         })
       });
 
@@ -183,7 +236,56 @@ export default function CheckoutPage() {
               <div className="max-h-[70vh] overflow-auto space-y-6">
                 <section>
                   <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-semibold">Mã giảm giá</h4>
+                    <h4 className="font-semibold">Nhập mã giảm giá</h4>
+                    <span className="text-sm text-gray-500">Nhập mã voucher</span>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Nhập mã voucher..."
+                        value={voucherCode}
+                        onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
+                        className="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                      {voucherValidation.loading && (
+                        <div className="flex items-center px-3 py-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600"></div>
+                        </div>
+                      )}
+                    </div>
+                    {voucherValidation.error && (
+                      <div className="text-sm text-red-600">{voucherValidation.error}</div>
+                    )}
+                    {appliedVoucher && voucherValidation.valid && (
+                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-semibold text-green-800">{appliedVoucher.name}</div>
+                            <div className="text-sm text-green-600">
+                              {appliedVoucher.discount_type === 'percentage' 
+                                ? `Giảm ${appliedVoucher.discount_value}%` 
+                                : `Giảm ${appliedVoucher.discount_value.toLocaleString()}₫`}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => {
+                              setVoucherCode("");
+                              setAppliedVoucher(null);
+                              setVoucherValidation({ loading: false, error: null, valid: false });
+                            }}
+                            className="text-red-600 hover:text-red-800"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </section>
+                <section>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-semibold">Voucher của bạn</h4>
                     <span className="text-sm text-gray-500">Áp dụng tối đa 1</span>
                   </div>
                   {vouchers.length === 0 ? (

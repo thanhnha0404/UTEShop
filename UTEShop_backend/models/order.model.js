@@ -59,6 +59,16 @@ const Order = sequelize.define("Order", {
     defaultValue: 0,
     comment: "Số xu được tích lũy từ đơn hàng này"
   },
+  voucher_discount: {
+    type: DataTypes.DECIMAL(10, 2),
+    defaultValue: 0,
+    comment: "Số tiền giảm giá từ voucher"
+  },
+  voucher_code: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+    comment: "Mã voucher đã sử dụng"
+  },
   shipping_address: {
     type: DataTypes.TEXT,
     allowNull: true,

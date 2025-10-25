@@ -73,9 +73,18 @@ function UserProfile() {
       }
 
       try {
+        console.log('🔄 Fetching user vouchers...');
         const res = await getUserVouchers();
-        if (res.success) setVouchers(res.data.vouchers || []);
-      } catch (_) {}
+        console.log('🎫 Vouchers response:', res);
+        if (res.success) {
+          console.log('✅ Vouchers loaded:', res.data.vouchers?.length || 0);
+          setVouchers(res.data.vouchers || []);
+        } else {
+          console.error('❌ Error loading vouchers:', res.error);
+        }
+      } catch (error) {
+        console.error('❌ Error fetching vouchers:', error);
+      }
 
       try {
         const favRes = await getFavorites();

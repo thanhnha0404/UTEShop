@@ -24,12 +24,20 @@ export const resetPassword = async (email, otp, newPassword, confirmPassword) =>
 export const getUserLoyaltyPoints = async () => {
   try {
     const token = getToken();
+    console.log('🔑 Token for loyalty points:', token ? 'Present' : 'Missing');
+    console.log('🌐 API URL:', `${API_URL}/loyalty/points`);
+    
     const response = await axios.get(`${API_URL}/loyalty/points`, { 
       withCredentials: true,
       headers: { Authorization: `Bearer ${token}` }
     });
+    
+    console.log('📡 Loyalty points API response status:', response.status);
+    console.log('📡 Loyalty points API response data:', response.data);
+    
     return { success: true, data: response.data };
   } catch (error) {
+    console.error('❌ Loyalty points API error:', error.response?.status, error.response?.data);
     return { success: false, error: error.response?.data?.message || 'Lỗi khi lấy thông tin xu' };
   }
 };
@@ -64,13 +72,41 @@ export const calculateLoyaltyUsage = async (orderTotal) => {
 export const getUserVouchers = async () => {
   try {
     const token = getToken();
+    console.log('🔑 Token for vouchers:', token ? 'Present' : 'Missing');
+    console.log('🌐 Vouchers API URL:', `${API_URL}/loyalty/vouchers`);
+    
     const response = await axios.get(`${API_URL}/loyalty/vouchers`, {
+      withCredentials: true,
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    
+    console.log('📡 Vouchers API response status:', response.status);
+    console.log('📡 Vouchers API response data:', response.data);
+    
+    return { success: true, data: response.data };
+  } catch (error) {
+    console.error('❌ Vouchers API error:', error.response?.status, error.response?.data);
+    return { success: false, error: error.response?.data?.message || 'Lỗi khi lấy voucher' };
+  }
+};
+
+export const validateVoucher = async (code, orderTotal) => {
+  try {
+    const token = getToken();
+    const response = await axios.post(`${API_URL}/vouchers/validate`, { 
+      code, 
+      orderTotal 
+    }, {
       withCredentials: true,
       headers: { Authorization: `Bearer ${token}` }
     });
     return { success: true, data: response.data };
   } catch (error) {
-    return { success: false, error: error.response?.data?.message || 'Lỗi khi lấy voucher' };
+    return { 
+      success: false, 
+      error: error.response?.data?.message || 'Lỗi khi xác thực voucher',
+      valid: false 
+    };
   }
 };
 

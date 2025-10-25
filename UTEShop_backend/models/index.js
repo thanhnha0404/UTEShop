@@ -87,4 +87,5 @@ Drink.hasMany(Favorite, { foreignKey: "drink_id", as: "favorites" });
 Notification.belongsTo(User, { foreignKey: "user_id", as: "user" });
 User.hasMany(Notification, { foreignKey: "user_id", as: "notifications" });
 
+
 module.exports = db;

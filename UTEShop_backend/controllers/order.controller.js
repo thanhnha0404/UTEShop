@@ -12,7 +12,7 @@ exports.createOrder = async (req, res) => {
     
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-    const { items, shippingAddress, shippingPhone, notes, paymentMethod } = req.body;
+    const { items, shippingAddress, shippingPhone, notes, paymentMethod, voucherCode } = req.body;
 
     if (!items || items.length === 0) {
       await t.rollback();
@@ -27,9 +27,46 @@ exports.createOrder = async (req, res) => {
     const user = await db.User.findByPk(userId);
     const loyaltyPointsUsed = req.body.loyaltyPointsUsed || 0;
     
-    // Tính tổng tiền sau khi trừ xu (1 xu = 1 VNĐ)
+    // Validate and calculate voucher discount
+    let voucherDiscount = 0;
+    let appliedVoucher = null;
+    
+    if (voucherCode) {
+      const voucher = await db.Voucher.findOne({
+        where: { 
+          code: voucherCode.toUpperCase(),
+          status: 'active'
+        }
+      });
+      
+      if (voucher) {
+        const now = new Date();
+        
+        // Check voucher validity
+        if (voucher.end_date >= now && voucher.start_date <= now) {
+          // Check usage limit
+          if (!voucher.usage_limit || voucher.used_count < voucher.usage_limit) {
+            // Check minimum order amount
+            if (voucher.min_order_amount <= subtotal) {
+              // Calculate discount
+              if (voucher.discount_type === 'percentage') {
+                voucherDiscount = Math.floor((subtotal * voucher.discount_value) / 100);
+                if (voucher.max_discount_amount && voucherDiscount > voucher.max_discount_amount) {
+                  voucherDiscount = voucher.max_discount_amount;
+                }
+              } else {
+                voucherDiscount = Math.min(voucher.discount_value, subtotal);
+              }
+              appliedVoucher = voucher;
+            }
+          }
+        }
+      }
+    }
+    
+    // Tính tổng tiền sau khi trừ xu và voucher (1 xu = 1 VNĐ)
     const totalBeforeDiscount = subtotal + shippingFee;
-    const total = Math.max(0, totalBeforeDiscount - loyaltyPointsUsed);
+    const total = Math.max(0, totalBeforeDiscount - loyaltyPointsUsed - voucherDiscount);
     
     // Tính xu được tích lũy (20.000 VNĐ = 100 xu) - chỉ tính trên subtotal, không tính shipping fee
     const loyaltyPointsEarned = Math.floor(subtotal / 20000) * 100;
@@ -77,6 +114,7 @@ exports.createOrder = async (req, res) => {
       total,
       loyalty_points_used: loyaltyPointsUsed,
       loyalty_points_earned: loyaltyPointsEarned,
+      voucher_discount: voucherDiscount,
       shipping_address: shippingAddress,
       shipping_phone: shippingPhone,
       notes,
@@ -92,6 +130,8 @@ exports.createOrder = async (req, res) => {
       total,
       loyalty_points_used: loyaltyPointsUsed,
       loyalty_points_earned: loyaltyPointsEarned,
+      voucher_discount: voucherDiscount,
+      voucher_code: appliedVoucher ? appliedVoucher.code : null,
       shipping_address: shippingAddress,
       shipping_phone: shippingPhone,
       notes,
@@ -125,6 +165,17 @@ exports.createOrder = async (req, res) => {
         {
           where: { id: item.drinkId },
           transaction: t
+        }
+      );
+    }
+
+    // Update voucher usage count if voucher was applied
+    if (appliedVoucher) {
+      await db.Voucher.update(
+        { used_count: db.sequelize.literal(`used_count + 1`) },
+        { 
+          where: { id: appliedVoucher.id },
+          transaction: t 
         }
       );
     }

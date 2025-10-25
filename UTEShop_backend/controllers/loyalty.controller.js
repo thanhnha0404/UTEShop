@@ -1,4 +1,5 @@
 const db = require("../models");
+const { Op } = require("sequelize");
 
 // Lấy thông tin xu của user
 exports.getUserLoyaltyPoints = async (req, res) => {
@@ -19,8 +20,8 @@ exports.getUserLoyaltyPoints = async (req, res) => {
         },
         where: {
           status: 'active',
-          start_date: { [db.Sequelize.Op.lte]: new Date() },
-          end_date: { [db.Sequelize.Op.gte]: new Date() }
+          start_date: { [Op.lte]: new Date() },
+          end_date: { [Op.gte]: new Date() }
         },
         attributes: ["id", "code", "name", "discount_type", "discount_value", "min_order_amount", "max_discount_amount", "end_date", "description"]
       }]
@@ -122,8 +123,8 @@ exports.getUserVouchers = async (req, res) => {
         as: 'voucher',
         where: {
           status: 'active',
-          start_date: { [db.Sequelize.Op.lte]: new Date() },
-          end_date: { [db.Sequelize.Op.gte]: new Date() }
+          start_date: { [Op.lte]: new Date() },
+          end_date: { [Op.gte]: new Date() }
         }
       }],
       order: [["created_at", "DESC"]]
