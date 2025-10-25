@@ -27,6 +27,7 @@ export default function DrinkDetailPage() {
   const [drink, setDrink] = useState(null);
   const [thumbsSwiper, setThumbsSwiper] = useState(null);
   const [qty, setQty] = useState(1);
+  const [isUpsized, setIsUpsized] = useState(false);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [userOrders, setUserOrders] = useState([]);
@@ -41,7 +42,6 @@ export default function DrinkDetailPage() {
         setDrink(data);
         setThumbsSwiper(null);
         
-        // Lấy đơn hàng của user để kiểm tra quyền đánh giá
         const token = getToken();
         if (token) {
           try {
@@ -55,7 +55,6 @@ export default function DrinkDetailPage() {
               const ordersData = await response.json();
               setUserOrders(ordersData.orders || []);
             }
-            // Lấy danh sách yêu thích và đánh dấu
             try {
               const favs = await getFavorites();
               if (favs.success) {
@@ -97,8 +96,6 @@ export default function DrinkDetailPage() {
   }
 
   const images = normalizeImages(drink.image_url);
-  console.log('Drink data:', drink);
-  console.log('Normalized images:', images);
 
   return (
     <div className="max-w-6xl mx-auto p-6">
@@ -163,7 +160,6 @@ export default function DrinkDetailPage() {
                 onClick={async () => {
                   const token = getToken();
                   if (!token) { navigate('/login'); return; }
-                  // Optimistic toggle
                   const next = !isFavorite;
                   setIsFavorite(next);
                   try {
@@ -174,12 +170,12 @@ export default function DrinkDetailPage() {
                       const res = await removeFavorite(drink.id);
                       if (!res.success) throw new Error(res.error);
                     }
-                    // notify other parts (e.g., profile) to refresh
                     window.dispatchEvent(new Event('favorites:updated'));
                   } catch (e) {
-                    // revert on failure
                     setIsFavorite(!next);
-                    window.dispatchEvent(new CustomEvent('toast:show', { detail: { message: 'Không thể cập nhật yêu thích. Vui lòng thử lại.', type: 'error' } }));
+                    window.dispatchEvent(new CustomEvent('toast:show', { 
+                      detail: { message: 'Không thể cập nhật yêu thích. Vui lòng thử lại.', type: 'error' } 
+                    }));
                   }
                 }}
                 className={`ml-3 p-2 rounded-full ${isFavorite ? 'bg-red-500 text-white' : 'bg-gray-100 text-red-500'}`}
@@ -191,29 +187,40 @@ export default function DrinkDetailPage() {
             {drink.category && (
               <p className="text-lg text-gray-600 mb-4">Danh mục: {drink.category.name}</p>
             )}
-            {drink.size && (
-              <p className="text-lg text-gray-600 mb-4">Kích cỡ: {drink.size}</p>
-            )}
           </div>
 
           {/* Giá */}
           <div className="bg-gray-50 p-4 rounded-lg">
             {drink.salePrice ? (
-              <div className="flex items-center space-x-4">
-                <span className="text-red-600 text-3xl font-bold">
-                  {Number(drink.salePrice).toLocaleString()}₫
-                </span>
-                <span className="text-gray-400 line-through text-xl">
-                  {Number(drink.price).toLocaleString()}₫
-                </span>
-                <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-sm font-semibold">
-                  -{Math.round(((drink.price - drink.salePrice) / drink.price) * 100)}%
-                </span>
+              <div>
+                <div className="flex items-center space-x-4">
+                  <span className="text-red-600 text-3xl font-bold">
+                    {(Number(drink.salePrice) + (isUpsized ? 5000 : 0)).toLocaleString()}₫
+                  </span>
+                  <span className="text-gray-400 line-through text-xl">
+                    {(Number(drink.price) + (isUpsized ? 5000 : 0)).toLocaleString()}₫
+                  </span>
+                  <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-sm font-semibold">
+                    -{Math.round(((drink.price - drink.salePrice) / drink.price) * 100)}%
+                  </span>
+                </div>
+                {isUpsized && (
+                  <div className="mt-2 text-sm text-orange-600 font-medium">
+                    Đã bao gồm phí upsize +5,000₫
+                  </div>
+                )}
               </div>
             ) : (
-              <span className="text-gray-900 text-3xl font-bold">
-                {Number(drink.price).toLocaleString()}₫
-              </span>
+              <div>
+                <span className="text-gray-900 text-3xl font-bold">
+                  {(Number(drink.price) + (isUpsized ? 5000 : 0)).toLocaleString()}₫
+                </span>
+                {isUpsized && (
+                  <div className="mt-2 text-sm text-orange-600 font-medium">
+                    Đã bao gồm phí upsize +5,000₫
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
@@ -242,23 +249,39 @@ export default function DrinkDetailPage() {
           </div>
 
           {/* Chọn số lượng */}
-          <div className="flex items-center space-x-4">
-            <span className="text-gray-700 font-semibold">Số lượng:</span>
-            <div className="flex items-center space-x-2">
+          <div className="space-y-4">
+            <div className="flex items-center space-x-4">
+              <span className="text-gray-700 font-semibold">Số lượng:</span>
+              <div className="flex items-center space-x-2">
+                <button
+                  disabled={qty <= 1}
+                  onClick={() => setQty(q => Math.max(1, q - 1))}
+                  className="w-8 h-8 bg-gray-200 hover:bg-gray-300 rounded-full flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  -
+                </button>
+                <span className="w-12 text-center font-semibold">{qty}</span>
+                <button
+                  disabled={qty >= drink.stock || drink.stock <= 0}
+                  onClick={() => setQty(q => Math.min(drink.stock, q + 1))}
+                  className="w-8 h-8 bg-gray-200 hover:bg-gray-300 rounded-full flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+            
+            {/* Size và Upsize */}
+            <div className="flex items-center gap-3">
               <button
-                disabled={qty <= 1}
-                onClick={() => setQty(q => Math.max(1, q - 1))}
-                className="w-8 h-8 bg-gray-200 hover:bg-gray-300 rounded-full flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => setIsUpsized(!isUpsized)}
+                className={`px-3 py-1 rounded-lg border-2 transition-all duration-200 text-sm ${
+                  isUpsized 
+                    ? 'border-orange-500 bg-orange-50 text-orange-700 font-medium' 
+                    : 'border-gray-300 bg-white text-gray-700 hover:border-orange-300'
+                }`}
               >
-                -
-              </button>
-              <span className="w-12 text-center font-semibold">{qty}</span>
-              <button
-                disabled={qty >= drink.stock || drink.stock <= 0}
-                onClick={() => setQty(q => Math.min(drink.stock, q + 1))}
-                className="w-8 h-8 bg-gray-200 hover:bg-gray-300 rounded-full flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                +
+                {isUpsized ? '✓ Upsize (+5,000₫)' : 'Upsize (+5,000₫)'}
               </button>
             </div>
           </div>
@@ -280,12 +303,34 @@ export default function DrinkDetailPage() {
                 return;
               }
               try {
-                await addToCart({ drinkId: drink.id, quantity: qty, token });
+                console.log('🛒 Adding to cart:', { 
+                  drinkId: drink.id, 
+                  quantity: qty, 
+                  isUpsized: isUpsized,
+                  ice_level: 'normal',
+                  sugar_level: 'normal',
+                  notes: ''
+                });
+                
+                // Gửi isUpsized (boolean) thay vì size
+                await addToCart({ 
+                  drinkId: drink.id, 
+                  quantity: qty, 
+                  isUpsized: isUpsized,   // Boolean: true hoặc false
+                  ice_level: 'normal',    
+                  sugar_level: 'normal',  
+                  notes: '',              
+                  token 
+                });
+                
+                console.log('✅ Added to cart successfully');
                 setOpen(true);
                 window.dispatchEvent(new Event('cart:updated'));
                 setTimeout(() => setOpen(false), 1200);
               } catch (err) {
-                alert(err?.response?.data?.message || err?.message || 'Lỗi');
+                console.error('❌ Add to cart error:', err);
+                console.error('Error response:', err?.response?.data);
+                alert(err?.response?.data?.message || err?.message || 'Lỗi khi thêm vào giỏ hàng');
               }
             }}
           >

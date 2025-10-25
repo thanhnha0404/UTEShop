@@ -20,19 +20,60 @@ export default function CartPage() {
     (async () => {
       const data = await getMyCart({ token });
       const rows = Array.isArray(data.items) ? data.items : [];
-      setItems(rows);
+      
+      console.log('🔍 RAW data from backend:', rows);
+      
+      // Backend TRẢ VỀ isUpsized trực tiếp, không cần convert
+      const processedRows = rows.map(item => {
+        // isUpsized có thể là: true, false, 1, 0, hoặc undefined
+        const isUpsizedValue = Boolean(item.isUpsized);
+        
+        console.log('🔍 Processing item:', {
+          name: item?.drink?.name,
+          size: item.size,
+          isUpsized_raw: item.isUpsized,
+          isUpsized_boolean: isUpsizedValue
+        });
+        
+        return {
+          ...item,
+          isUpsized: isUpsizedValue
+        };
+      });
+      
+      setItems(processedRows);
+      
       // default tick on
       const initial = {};
-      rows.forEach(r => { initial[r.drinkId] = true; });
+      processedRows.forEach(r => { initial[r.drinkId] = true; });
       setSelected(initial);
     })();
   }, [token, navigate]);
 
   const subtotal = useMemo(() => {
+    console.log('💰 Calculating subtotal with items:', items.map(it => ({ 
+      name: it?.drink?.name, 
+      isUpsized: it.isUpsized, 
+      basePrice: it?.drink?.salePrice || it?.drink?.price 
+    })));
+    
     return items.reduce((sum, it) => {
       const isChecked = selected[it.drinkId];
       if (!isChecked) return sum;
-      return sum + Number(it?.drink?.salePrice || it?.drink?.price || 0) * it.quantity;
+      
+      let basePrice = Number(it?.drink?.salePrice || it?.drink?.price || 0);
+      
+      // Tính phí upsize (+5000) dựa trên isUpsized
+      if (it.isUpsized) {
+        basePrice += 5000;
+        console.log('✅ Upsize applied:', { 
+          name: it?.drink?.name, 
+          originalPrice: Number(it?.drink?.salePrice || it?.drink?.price || 0),
+          withUpsize: basePrice 
+        });
+      }
+      
+      return sum + basePrice * it.quantity;
     }, 0);
   }, [items, selected]);
 
@@ -46,6 +87,7 @@ export default function CartPage() {
     }
     return Math.min(Number(appliedVoucher.discount_value || 0), subtotal);
   }, [appliedVoucher, subtotal]);
+  
   const grandTotal = Math.max(0, subtotal - discount);
 
   const allChecked = useMemo(() => {
@@ -108,24 +150,55 @@ export default function CartPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="font-semibold truncate">{it?.drink?.name}</div>
+                <div className="text-sm text-gray-600">
+                  Size: {it.size || 'M'}
+                  {it.isUpsized && <span className="text-orange-600 font-medium"> (Upsize)</span>}
+                </div>
                 <div className="text-sm text-gray-500 line-through">
                   {it?.drink?.salePrice ? Number(it?.drink?.price || 0).toLocaleString() + '₫' : ''}
                 </div>
-                <div className="text-red-600 font-semibold">{Number(it?.drink?.salePrice || it?.drink?.price || 0).toLocaleString()}₫</div>
+                <div className="text-red-600 font-semibold">
+                  {Number(it?.drink?.salePrice || it?.drink?.price || 0).toLocaleString()}₫
+                  {it.isUpsized && <span className="text-orange-600"> +5,000₫</span>}
+                </div>
               </div>
               <div className="flex items-center gap-2">
-                <button className="px-2 py-1 bg-gray-100 rounded" onClick={() => changeQty(it.drinkId, Math.max(1, it.quantity - 1))}>-</button>
-                <span>{it.quantity}</span>
-                <button className="px-2 py-1 bg-gray-100 rounded" onClick={() => changeQty(it.drinkId, it.quantity + 1)}>+</button>
+                <button 
+                  className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200" 
+                  onClick={() => changeQty(it.drinkId, Math.max(1, it.quantity - 1))}
+                >
+                  -
+                </button>
+                <span className="w-8 text-center">{it.quantity}</span>
+                <button 
+                  className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200" 
+                  onClick={() => changeQty(it.drinkId, it.quantity + 1)}
+                >
+                  +
+                </button>
               </div>
-              <div className="w-20 text-right font-semibold">
-                {(Number(it?.drink?.salePrice || it?.drink?.price || 0) * it.quantity).toLocaleString()}₫
+              <div className="w-24 text-right font-semibold">
+                {(() => {
+                  let basePrice = Number(it?.drink?.salePrice || it?.drink?.price || 0);
+                  // Thống nhất: Dùng isUpsized
+                  if (it.isUpsized) {
+                    basePrice += 5000;
+                  }
+                  return (basePrice * it.quantity).toLocaleString() + '₫';
+                })()}
               </div>
-              <button className="text-gray-500 hover:text-red-600" title="Xóa" onClick={() => removeItem(it.drinkId)}>🗑️</button>
+              <button 
+                className="text-gray-500 hover:text-red-600" 
+                title="Xóa" 
+                onClick={() => removeItem(it.drinkId)}
+              >
+                🗑️
+              </button>
             </div>
           ))
         )}
       </div>
+      
       <div className="bg-white rounded-xl border h-fit p-4">
         <div className="font-bold mb-3">THÀNH TIỀN</div>
         <div className="mb-2">
@@ -138,7 +211,7 @@ export default function CartPage() {
               Khuyến mãi {appliedVoucher ? `(${appliedVoucher.code})` : "(chưa chọn)"}
             </span>
             <button
-              className="text-indigo-600 hover:underline"
+              className="text-indigo-600 hover:underline text-sm"
               onClick={async () => {
                 try {
                   if (!voucherOpen) {
@@ -160,17 +233,27 @@ export default function CartPage() {
                 <div className="text-sm text-gray-600">Không có voucher khả dụng</div>
               ) : (
                 vouchers.map(v => (
-                  <div key={v.id} className="flex items-center justify-between p-3 bg-yellow-100 rounded mb-2">
-                    <div>
+                  <div key={v.id} className="flex items-center justify-between p-3 bg-yellow-100 rounded mb-2 last:mb-0">
+                    <div className="flex-1">
                       <div className="font-semibold">{v.code}</div>
                       <div className="text-sm text-gray-600">
-                        {v.discount_type === 'percent' ? `Giảm ${Number(v.discount_value).toLocaleString()}%` : `Giảm ${Number(v.discount_value).toLocaleString()}₫`}
-                        {Number(v.min_order_total || 0) > 0 ? ` cho đơn từ ${Number(v.min_order_total).toLocaleString()}₫` : ''}
+                        {v.discount_type === 'percent' 
+                          ? `Giảm ${Number(v.discount_value).toLocaleString()}%` 
+                          : `Giảm ${Number(v.discount_value).toLocaleString()}₫`}
+                        {Number(v.min_order_total || 0) > 0 
+                          ? ` cho đơn từ ${Number(v.min_order_total).toLocaleString()}₫` 
+                          : ''}
                       </div>
                     </div>
                     <button
-                      className="px-3 py-1 bg-indigo-600 text-white rounded-lg"
-                      onClick={() => { setAppliedVoucher(v); try { sessionStorage.setItem('applied_voucher', JSON.stringify(v)); } catch(_){} }}
+                      className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg ml-2"
+                      onClick={() => { 
+                        setAppliedVoucher(v); 
+                        setVoucherOpen(false);
+                        try { 
+                          sessionStorage.setItem('applied_voucher', JSON.stringify(v)); 
+                        } catch(_){} 
+                      }}
                     >
                       Áp dụng
                     </button>
@@ -184,14 +267,17 @@ export default function CartPage() {
           <span>Giảm giá</span>
           <span className="font-semibold text-red-600">- {discount.toLocaleString()}₫</span>
         </div>
-        <div className="flex justify-between mb-2">
-          <span className="font-semibold">Tổng số tiền</span>
-          <span className="font-bold">{grandTotal.toLocaleString()}₫</span>
+        <div className="flex justify-between mb-3 pt-3 border-t">
+          <span className="font-semibold text-lg">Tổng số tiền</span>
+          <span className="font-bold text-lg text-red-600">{grandTotal.toLocaleString()}₫</span>
         </div>
-        <button onClick={() => navigate('/checkout')} className="w-full mt-3 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 rounded-lg">THANH TOÁN</button>
+        <button 
+          onClick={() => navigate('/checkout')} 
+          className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-lg transition-colors"
+        >
+          THANH TOÁN
+        </button>
       </div>
     </div>
   );
 }
-
-

@@ -21,7 +21,7 @@ function UserProfile() {
     fullName: "",
     address: "",
     birthDate: "",
-    phoneNumber: "",
+    phone: "",
     username: "",
     email: "",
   });
@@ -42,12 +42,12 @@ function UserProfile() {
         fullName: stored.fullName || stored.name || "",
         address: stored.address || "",
         birthDate: formatDateToDDMMYYYY(stored.birthDate || stored.dob || ""),
-        phoneNumber: stored.phoneNumber || stored.phone || "",
+        phone: stored.phone || "",
         username: stored.username || "",
         email: stored.email || "",
       };
 
-      const needsMore = !baseState.address || !baseState.birthDate || !baseState.phoneNumber;
+      const needsMore = !baseState.address || !baseState.birthDate || !baseState.phone;
       if (!needsMore || !stored.id) {
         setUser(baseState);
         setIsLoading(false);
@@ -61,7 +61,7 @@ function UserProfile() {
           fullName: baseState.fullName,
           address: data.address || baseState.address,
           birthDate: formatDateToDDMMYYYY(data.birthDate || data.dob || baseState.birthDate),
-          phoneNumber: data.phoneNumber || data.phone || baseState.phoneNumber,
+          phone: data.phone || baseState.phone,
           username: baseState.username || data.username || "",
           email: baseState.email || data.email || "",
         });
@@ -139,7 +139,7 @@ function UserProfile() {
                   fullName: user.fullName || "",
                   address: user.address || "",
                   dob: user.birthDate ? new Date(user.birthDate.split('/').reverse().join('-')) : null,
-                  phone: user.phoneNumber || "",
+                  phone: user.phone || "",
                   email: user.email || "",
                 };
                 // Convert date to yyyy-mm-dd if valid
@@ -158,7 +158,7 @@ function UserProfile() {
                   fullName: updated.fullName || user.fullName,
                   address: updated.address || user.address,
                   birthDate: formatDateToDDMMYYYY(updated.dob || user.birthDate),
-                  phoneNumber: updated.phone || user.phoneNumber,
+                  phone: updated.phone || user.phone,
                   username: updated.username || user.username,
                   email: updated.email || user.email,
                 });
@@ -220,8 +220,8 @@ function UserProfile() {
               <input
                 type="text"
                 className="w-full p-3 rounded-lg bg-white/90 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                value={user.phoneNumber || ""}
-                onChange={(e) => setUser((u) => ({ ...u, phoneNumber: e.target.value }))}
+                value={user.phone || ""}
+                onChange={(e) => setUser((u) => ({ ...u, phone: e.target.value }))}
               />
             </div>
 

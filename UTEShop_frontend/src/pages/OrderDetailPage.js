@@ -268,7 +268,10 @@ export default function OrderDetailPage() {
                 <div className="font-semibold text-lg">{item.drink?.name}</div>
                 <div className="text-sm text-gray-500 space-y-1">
                   <div>Số lượng: {item.quantity}</div>
-                  {item.size && <div>Size: {item.size}</div>}
+                  <div>
+                    Size: {item.size || 'M'}
+                    {item.isUpsized && <span className="text-orange-600 font-medium"> (Upsize +5,000₫)</span>}
+                  </div>
                   {item.ice_level && <div>Đá: {item.ice_level}</div>}
                   {item.sugar_level && <div>Đường: {item.sugar_level}</div>}
                   {item.notes && <div>Ghi chú: {item.notes}</div>}

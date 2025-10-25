@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const userController = require("../controllers/user.controller.js");
+const { authenticateJWT } = require("../middlewares/auth.middleware.js");
 const {
   validateRegisterPayload,
   validateOtpPayload,
@@ -44,6 +45,9 @@ router.post("/verify-forgot-otp", userController.verifyForgotOtp);
 
 // POST reset password
 router.post("/reset-password", userController.resetPassword);
+
+// GET profile của user hiện tại
+router.get("/profile", authenticateJWT, userController.getProfile);
 
 // GET user by id (chỉ có ở nhánh mới, không trùng nên giữ lại)
 router.get("/:id", userController.getUserById);

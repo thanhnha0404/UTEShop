@@ -81,6 +81,11 @@ const Order = sequelize.define("Order", {
     type: DataTypes.TEXT,
     allowNull: true,
   },
+  is_hidden: {
+    type: DataTypes.BOOLEAN,
+    allowNull: true,
+    defaultValue: false,
+  },
   cancelled_at: {
     type: DataTypes.DATE,
     allowNull: true,

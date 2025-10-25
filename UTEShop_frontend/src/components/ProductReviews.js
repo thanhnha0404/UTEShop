@@ -134,9 +134,9 @@ const ProductReviews = ({ drinkId, userOrders = [] }) => {
     );
   };
 
-  // Check if user has at least a pending or completed order containing this product
+  // Check if user has at least a shipping or delivered order containing this product
   const hasPurchasedProduct = userOrders.some(order => 
-    ['pending','confirmed','preparing','shipping','delivered'].includes(order.status) &&
+    ['shipping','delivered'].includes(order.status) &&
     order.orderItems?.some(item => 
       item.drink_id === drinkId || item.drink?.id === drinkId
     )
@@ -154,7 +154,8 @@ const ProductReviews = ({ drinkId, userOrders = [] }) => {
     canReview,
     drinkId,
     ordersData: userOrders,
-    orderItems: userOrders.flatMap(order => order.orderItems || [])
+    orderItems: userOrders.flatMap(order => order.orderItems || []),
+    orderStatuses: userOrders.map(order => ({ id: order.id, status: order.status, items: order.orderItems?.length || 0 }))
   });
 
   return (

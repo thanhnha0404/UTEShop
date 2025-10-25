@@ -32,6 +32,36 @@ exports.getAllUsers = async (req, res) => {
   }
 };
 
+// Lấy thông tin profile của user hiện tại
+// Lấy thông tin profile của user hiện tại
+exports.getProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await User.findByPk(userId, {
+      attributes: ['id', 'fullName', 'username', 'email', 'phone', 'address', 'birthDate', 'loyalty_points']
+    });
+    if (!user) {
+      return res.status(404).json({ message: "Không tìm thấy user" });
+    }
+    
+    // Transform to camelCase for frontend consistency
+    const profile = {
+      id: user.id,
+      fullName: user.fullName,
+      username: user.username,
+      email: user.email,
+      phone: user.phone,
+      address: user.address,
+      birthDate: user.birthDate,
+      loyaltyPoints: user.loyalty_points // Convert snake_case to camelCase
+    };
+    
+    res.json(profile);
+  } catch (err) {
+    res.status(500).json({ message: "Lỗi khi lấy thông tin profile", error: err });
+  }
+};
+
 // Lấy user theo ID
 exports.getUserById = async (req, res) => {
   try {

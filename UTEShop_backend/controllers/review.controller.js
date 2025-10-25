@@ -109,6 +109,19 @@ exports.createReview = async (req, res) => {
       reward = { type: "points", amount: addPoints, notificationData: pointsData };
     }
 
+    // Cập nhật trạng thái đơn hàng khi có review
+    if (orderId) {
+      const order = await db.Order.findByPk(orderId, { transaction: t });
+      if (order && order.status === "pending") {
+        // Chuyển từ "pending" (mua) thành "shipping" (đang giao) khi có review
+        await order.update({
+          status: "shipping",
+          shipping_at: new Date()
+        }, { transaction: t });
+        console.log(`📦 Đơn hàng #${order.order_number} chuyển sang trạng thái "shipping" sau khi có review`);
+      }
+    }
+
     await t.commit();
 
     // Tạo thông báo cho user sau khi commit thành công
@@ -300,7 +313,10 @@ exports.getProductReviews = async (req, res) => {
     const { page = 1, limit = 10, rating } = req.query;
     const offset = (page - 1) * limit;
 
-    const whereClause = { drink_id: drinkId };
+    const whereClause = { 
+      drink_id: drinkId,
+      is_hidden: false  // Chỉ lấy review không bị ẩn
+    };
     if (rating && rating !== "all") {
       whereClause.rating = parseInt(rating);
     }
@@ -315,9 +331,12 @@ exports.getProductReviews = async (req, res) => {
       offset: parseInt(offset)
     });
 
-    // Tính điểm trung bình
+    // Tính điểm trung bình (chỉ tính review không bị ẩn)
     const avgRating = await db.Review.findOne({
-      where: { drink_id: drinkId },
+      where: { 
+        drink_id: drinkId,
+        is_hidden: false
+      },
       attributes: [
         [db.sequelize.fn('AVG', db.sequelize.col('rating')), 'average']
       ],
@@ -351,7 +370,10 @@ exports.getUserReviews = async (req, res) => {
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
     const reviews = await db.Review.findAndCountAll({
-      where: { user_id: userId },
+      where: { 
+        user_id: userId,
+        is_hidden: false  // Chỉ lấy review không bị ẩn
+      },
       include: [
         { model: db.Drink, as: "drink", attributes: ["id", "name", "image_url"] }
       ],

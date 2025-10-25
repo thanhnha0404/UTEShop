@@ -25,6 +25,7 @@ export default function ProductDetailPage() {
   const [product, setProduct] = useState(null);
   const [thumbsSwiper, setThumbsSwiper] = useState(null);
   const [qty, setQty] = useState(1);
+  const [isUpsized, setIsUpsized] = useState(false);
   const navigate = useNavigate();
   const [userOrders, setUserOrders] = useState([]);
   const [isFavorite, setIsFavorite] = useState(false);
@@ -131,25 +132,62 @@ export default function ProductDetailPage() {
           <p className="text-sm text-gray-500 mb-3">Danh mục: {product.category.name}</p>
         )}
         <div className="mb-4">
-          {product.salePrice ? (
-            <>
-              <span className="text-red-600 text-2xl font-bold mr-3">
-                {Number(product.salePrice).toLocaleString()}₫
-              </span>
-              <span className="text-gray-400 line-through">
-                {Number(product.price).toLocaleString()}₫
-              </span>
-            </>
-          ) : (
-            <span className="text-gray-900 text-2xl font-bold">
-              {Number(product.price).toLocaleString()}₫
-            </span>
-          )}
+          {(() => {
+            let basePrice = product.salePrice || product.price;
+            let originalPrice = product.price;
+            
+            // Tính phí upsize
+            if (isUpsized) {
+              basePrice += 5000;
+              originalPrice += 5000;
+            }
+            
+            return product.salePrice ? (
+              <>
+                <span className="text-red-600 text-2xl font-bold mr-3">
+                  {Number(basePrice).toLocaleString()}₫
+                </span>
+                <span className="text-gray-400 line-through">
+                  {Number(originalPrice).toLocaleString()}₫
+                </span>
+                {isUpsized && (
+                  <div className="text-sm text-orange-600 font-medium">
+                    (Upsize +5,000₫)
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <span className="text-gray-900 text-2xl font-bold">
+                  {Number(basePrice).toLocaleString()}₫
+                </span>
+                {isUpsized && (
+                  <div className="text-sm text-orange-600 font-medium">
+                    (Upsize +5,000₫)
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </div>
         <p className="text-sm text-gray-600 mb-2">Tồn kho: {product.stock}</p>
-        {product.size && (
-          <p className="text-sm text-gray-600 mb-2">Kích cỡ: {product.size}</p>
-        )}
+        
+        {/* Size Selection */}
+        <div className="mb-4">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsUpsized(!isUpsized)}
+              className={`px-3 py-1 rounded-lg border-2 transition-all duration-200 text-sm ${
+                isUpsized 
+                  ? 'border-orange-500 bg-orange-50 text-orange-700 font-medium' 
+                  : 'border-gray-300 bg-white text-gray-700 hover:border-orange-300'
+              }`}
+            >
+              {isUpsized ? '✓ Upsize (+5,000₫)' : 'Upsize (+5,000₫)'}
+            </button>
+          </div>
+        </div>
+        
         <div className="flex items-center gap-3 mb-4">
           <button
             disabled={qty <= 1}
@@ -176,7 +214,13 @@ export default function ProductDetailPage() {
               return;
             }
             try {
-              await addToCart({ drinkId: product.id, quantity: qty, token });
+              await addToCart({ 
+                drinkId: product.id, 
+                quantity: qty, 
+                size: 'M',
+                isUpsized: isUpsized,
+                token 
+              });
               alert('Đã thêm vào giỏ hàng!');
               window.dispatchEvent(new Event('cart:updated'));
             } catch (err) {

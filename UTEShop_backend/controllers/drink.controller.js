@@ -8,6 +8,7 @@ exports.getLatest = async (req, res) => {
   try {
     const limit = Number(req.query.limit) || 8;
     const items = await Drink.findAll({
+      where: { is_hidden: false }, // Chỉ lấy sản phẩm không bị ẩn
       include: [includeCategory],
       order: [["created_at", "DESC"]],
       limit,
@@ -22,6 +23,7 @@ exports.getBestSellers = async (req, res) => {
   try {
     const limit = Number(req.query.limit) || 6;
     const items = await Drink.findAll({
+      where: { is_hidden: false }, // Chỉ lấy sản phẩm không bị ẩn
       include: [includeCategory],
       order: [["sold", "DESC"]],
       limit,
@@ -36,6 +38,7 @@ exports.getMostViewed = async (req, res) => {
   try {
     const limit = Number(req.query.limit) || 8;
     const items = await Drink.findAll({
+      where: { is_hidden: false }, // Chỉ lấy sản phẩm không bị ẩn
       include: [includeCategory],
       order: [["views", "DESC"]],
       limit,
@@ -51,6 +54,7 @@ exports.getTopDiscount = async (req, res) => {
     const limit = Number(req.query.limit) || 4;
     // order by (price - salePrice)/price desc, handle nulls
     const items = await Drink.findAll({
+      where: { is_hidden: false }, // Chỉ lấy sản phẩm không bị ẩn
       include: [includeCategory],
       order: [
         [literal("CASE WHEN salePrice IS NULL OR salePrice = 0 THEN 0 ELSE (price - salePrice)/price END"), "DESC"],
@@ -66,7 +70,10 @@ exports.getTopDiscount = async (req, res) => {
 exports.getDetail = async (req, res) => {
   try {
     const { id } = req.params;
-    const item = await Drink.findByPk(id, { include: [includeCategory] });
+    const item = await Drink.findOne({ 
+      where: { id, is_hidden: false }, // Chỉ lấy sản phẩm không bị ẩn
+      include: [includeCategory] 
+    });
     if (!item) return res.status(404).json({ message: "Không tìm thấy đồ uống" });
     
     // Thêm thông tin trạng thái tồn kho
@@ -89,7 +96,7 @@ exports.getAll = async (req, res) => {
     const categoryId = req.query.categoryId;
     const offset = (page - 1) * limit;
 
-    let whereClause = {};
+    let whereClause = { is_hidden: false }; // Chỉ lấy sản phẩm không bị ẩn
     if (categoryId) {
       whereClause.category_id = categoryId;
     }

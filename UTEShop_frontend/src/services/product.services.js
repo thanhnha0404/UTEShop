@@ -25,10 +25,11 @@ export const getAllDrinks = (page = 1, limit = 8, categoryId = null) =>
 export const getCategories = () =>
   axios.get(`${API_BASE_URL}/categories`).then(r => r.data);
 
-export const addToCart = ({ drinkId, quantity, token }) =>
+// ✅ SỬA HÀM NÀY - Đổi size thành isUpsized
+export const addToCart = ({ drinkId, quantity, isUpsized, ice_level, sugar_level, notes, token }) =>
   axios.post(
     `${API_BASE_URL}/cart/add`,
-    { drinkId, quantity },
+    { drinkId, quantity, isUpsized, ice_level, sugar_level, notes },
     { headers: token ? { Authorization: `Bearer ${token}` } : undefined }
   ).then(r => r.data);
 
@@ -56,5 +57,3 @@ export const checkoutCOD = ({ token }) =>
   axios.post(`${API_BASE_URL}/checkout/cod`, {}, {
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,
   }).then(r => r.data);
-
-

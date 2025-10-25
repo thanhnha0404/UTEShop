@@ -3,7 +3,7 @@ const db = require("../models");
 exports.addToCart = async (req, res) => {
   try {
     const userId = req.user?.id;
-    const { drinkId, bookId, quantity } = req.body || {};
+    const { drinkId, bookId, quantity, size, ice_level, sugar_level, notes, isUpsized } = req.body || {};
     const targetId = drinkId || bookId;
     const qty = Number(quantity) || 1;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
@@ -30,27 +30,46 @@ exports.addToCart = async (req, res) => {
       });
     }
 
-    const [item, created] = await db.CartItem.findOrCreate({
-      where: { user_id: userId, drink_id: targetId },
-      defaults: { quantity: qty, checked: true },
+    // Tìm item với cùng user, drink, size và isUpsized
+    const existingItem = await db.CartItem.findOne({
+      where: { 
+        user_id: userId, 
+        drink_id: targetId,
+        size: size || 'M',
+        isUpsized: isUpsized || false
+      }
     });
 
-    if (!created) {
-      const newQty = item.quantity + qty;
+    if (existingItem) {
+      // Cập nhật quantity nếu item đã tồn tại
+      const newQty = existingItem.quantity + qty;
       if (newQty > drink.stock) {
         return res.status(400).json({ 
           message: `Chỉ có thể thêm tối đa ${drink.stock} sản phẩm`,
           productName: drink.name,
           availableStock: drink.stock,
-          currentInCart: item.quantity,
+          currentInCart: existingItem.quantity,
           requestedToAdd: qty
         });
       }
-      item.quantity = newQty;
-      await item.save();
+      existingItem.quantity = newQty;
+      await existingItem.save();
+      return res.json({ message: "Updated cart item" });
+    } else {
+      // Tạo item mới
+      const newItem = await db.CartItem.create({
+        user_id: userId,
+        drink_id: targetId,
+        quantity: qty,
+        checked: true,
+        size: size || 'M', // Mặc định size M
+        ice_level: ice_level || null,
+        sugar_level: sugar_level || null,
+        notes: notes || null,
+        isUpsized: isUpsized || false
+      });
+      return res.json({ message: "Added to cart" });
     }
-
-    return res.json({ message: "Added to cart" });
   } catch (err) {
     return res.status(500).json({ message: "Add to cart error", error: err?.message || String(err) });
   }
@@ -62,7 +81,11 @@ exports.getMyCart = async (req, res) => {
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
     const items = await db.CartItem.findAll({
       where: { user_id: userId },
-      include: [{ model: db.Drink, as: "drink" }],
+      include: [{ 
+        model: db.Drink, 
+        as: "drink",
+        where: { is_hidden: false } // Chỉ lấy sản phẩm không bị ẩn
+      }],
       order: [["updated_at", "DESC"]],
     });
     return res.json({
@@ -77,6 +100,11 @@ exports.getMyCart = async (req, res) => {
           drinkId: i.drink_id,
           quantity: i.quantity,
           checked: i.checked,
+          size: i.size || 'M',
+          ice_level: i.ice_level,
+          sugar_level: i.sugar_level,
+          notes: i.notes,
+          isUpsized: i.isUpsized || false,
           drink: drinkData,
         };
       })

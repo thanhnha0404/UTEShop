@@ -21,7 +21,10 @@ exports.createOrder = async (req, res) => {
 
     // Tính tổng tiền
     const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const shippingFee = items.length > 0 ? 20000 : 0;
+    
+    // Tính phí vận chuyển theo phương thức
+    const shippingMethod = req.body.shippingMethod || 'standard';
+    const shippingFee = items.length > 0 ? (shippingMethod === 'express' ? 15000 : 10000) : 0;
     
     // Lấy thông tin user để kiểm tra xu hiện có
     const user = await db.User.findByPk(userId);
@@ -310,7 +313,10 @@ exports.getUserOrders = async (req, res) => {
     const { status, page = 1, limit = 10 } = req.query;
     const offset = (page - 1) * limit;
 
-    const whereClause = { user_id: userId };
+    const whereClause = { 
+      user_id: userId,
+      is_hidden: false  // Chỉ lấy đơn hàng không bị ẩn
+    };
     if (status && status !== "all") {
       whereClause.status = status;
     }

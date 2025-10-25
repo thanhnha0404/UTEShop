@@ -17,28 +17,53 @@ exports.checkoutCOD = async (req, res) => {
     }
 
     // Chuyển đổi dữ liệu giỏ hàng thành format cho order
-    const orderItems = items.map(i => ({
-      drinkId: i.drink_id,
-      quantity: i.quantity,
-      price: Number(i?.drink?.salePrice || i?.drink?.price || 0),
-      size: i.size || null,
-      iceLevel: i.ice_level || null,
-      sugarLevel: i.sugar_level || null,
-      notes: i.notes || null,
-    }));
+    const orderItems = items.map(i => {
+      let basePrice = Number(i?.drink?.salePrice || i?.drink?.price || 0);
+      
+      // Tính phí upsize (+5000)
+      if (i.isUpsized) {
+        basePrice += 5000;
+      }
+      
+      return {
+        drinkId: i.drink_id,
+        quantity: i.quantity,
+        price: basePrice,
+        size: i.size || null,
+        iceLevel: i.ice_level || null,
+        sugarLevel: i.sugar_level || null,
+        notes: i.notes || null,
+      };
+    });
 
     // Lấy thông tin user để lấy địa chỉ giao hàng
     const user = await db.User.findByPk(userId);
+    
+    // Kiểm tra và xử lý địa chỉ
+    let shippingAddress = user.address;
+    let shippingPhone = user.phone;
+    
+    if (!shippingAddress || shippingAddress.trim() === '') {
+      shippingAddress = "Chưa cập nhật địa chỉ";
+    }
+    
+    if (!shippingPhone || shippingPhone.trim() === '') {
+      shippingPhone = "Chưa cập nhật số điện thoại";
+    }
+    
+    console.log("🔍 User address:", shippingAddress);
+    console.log("🔍 User phone:", shippingPhone);
     
     // Tạo request body cho order controller
     const orderRequest = {
       body: {
         items: orderItems,
-        shippingAddress: user.address || "Chưa cập nhật địa chỉ",
-        shippingPhone: user.phone || "Chưa cập nhật số điện thoại",
+        shippingAddress: shippingAddress,
+        shippingPhone: shippingPhone,
         notes: "",
         paymentMethod: "COD",
-        loyaltyPointsUsed: req.body.loyaltyPointsUsed || 0
+        loyaltyPointsUsed: req.body.loyaltyPointsUsed || 0,
+        shippingMethod: req.body.shippingMethod || 'standard'
       },
       user: { id: userId }
     };

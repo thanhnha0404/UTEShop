@@ -25,6 +25,27 @@ const CartItem = sequelize.define("CartItem", {
     allowNull: true,
     defaultValue: true 
   },
+  size: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+  },
+  ice_level: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+  },
+  sugar_level: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+  },
+  notes: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
+  isUpsized: {
+    type: DataTypes.BOOLEAN,
+    allowNull: true,
+    defaultValue: false,
+  },
 }, {
   tableName: "cart_items",
   timestamps: true,
