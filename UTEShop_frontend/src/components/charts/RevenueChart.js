@@ -1,50 +1,30 @@
 import React from 'react';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+} from 'chart.js';
+import { Line } from 'react-chartjs-2';
 import ChartFallback from './ChartFallback';
 
-// Try to import Chart.js components, fallback if not available
-let ChartJS, Line;
-let chartAvailable = false;
-
-try {
-  const chartJS = require('chart.js');
-  const reactChartJS2 = require('react-chartjs-2');
-  
-  ChartJS = chartJS.Chart;
-  Line = reactChartJS2.Line;
-  
-  const {
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    Title,
-    Tooltip,
-    Legend,
-    Filler
-  } = chartJS;
-  
-  ChartJS.register(
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    Title,
-    Tooltip,
-    Legend,
-    Filler
-  );
-  
-  chartAvailable = true;
-} catch (error) {
-  console.log('Chart.js not installed, using fallback');
-}
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+);
 
 const RevenueChart = ({ data, title = "Biểu đồ doanh thu theo thời gian" }) => {
-  // Show fallback if Chart.js is not available
-  if (!chartAvailable) {
-    return <ChartFallback title={title} />;
-  }
-
   if (!data || data.length === 0) {
     return (
       <div className="bg-white rounded-lg shadow-sm border p-6">

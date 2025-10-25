@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Navigate } from 'react-router-dom';
+import { isAdmin } from '../utils/authStorage';
 import StatisticsCard from '../components/StatisticsCard';
 import StatisticsChart from '../components/StatisticsChart';
 import DateRangePicker from '../components/DateRangePicker';
@@ -153,6 +155,11 @@ const StatisticsPage = () => {
     testConnection();
     loadData();
   }, [loadData]);
+
+  // Check if user is admin, redirect if not
+  if (!isAdmin()) {
+    return <Navigate to="/" replace />;
+  }
 
   const handleDateChange = (start, end) => {
     setStartDate(start);

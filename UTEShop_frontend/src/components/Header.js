@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { getUser, clearAuth, getToken } from "../utils/authStorage";
+import { getUser, clearAuth, getToken, isAdmin } from "../utils/authStorage";
 import { getMyCart } from "../services/product.services";
 import Modal from "./Modal";
 import LoyaltyWallet from "./LoyaltyWallet";
@@ -183,13 +183,15 @@ export default function Header() {
                         >
                           Danh sách yêu thích
                         </Link>
-                        <Link
-                          to="/statistics"
-                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                          onClick={() => setShowUserMenu(false)}
-                        >
-                          Thống kê & Doanh thu
-                        </Link>
+                        {isAdmin() && (
+                          <Link
+                            to="/statistics"
+                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            onClick={() => setShowUserMenu(false)}
+                          >
+                            Thống kê & Doanh thu
+                          </Link>
+                        )}
                         <hr className="my-1" />
                         <button
                           onClick={() => {

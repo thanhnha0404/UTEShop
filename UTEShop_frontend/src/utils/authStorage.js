@@ -38,5 +38,14 @@ export function clearAuth() {
   }
 }
 
+export function isAdmin() {
+  try {
+    const user = getUser();
+    return user && user.role === 'admin';
+  } catch (_) {
+    return false;
+  }
+}
+
 
 

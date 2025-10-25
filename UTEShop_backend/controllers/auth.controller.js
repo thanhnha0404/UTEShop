@@ -31,6 +31,9 @@ exports.login = async (req, res) => {
         fullName: user.fullName,
         username: user.username,
         email: user.email,
+        role: user.role,
+        status: user.status,
+        loyalty_points: user.loyalty_points
       },
     });
   } catch (err) {

@@ -19,8 +19,9 @@ import OrdersPage from "./pages/OrdersPage";
 import OrderDetailPage from "./pages/OrderDetailPage";
 import CartPage from "./pages/CartPage";
 import FavoritesPage from "./pages/FavoritesPage";
-import StatisticsPage from "./pages/StatisticsPage";
 import NotificationsPage from "./pages/NotificationsPage";
+import StatisticsPage from "./pages/StatisticsPage";
+import AdminRoute from "./components/AdminRoute";
 
 function AppRoutes() {
   const location = useLocation();
@@ -41,7 +42,11 @@ function AppRoutes() {
         <Route path="/orders" element={<OrdersPage />} />
         <Route path="/orders/:orderId" element={<OrderDetailPage />} />
         <Route path="/favorites" element={<FavoritesPage />} />
-        <Route path="/statistics" element={<StatisticsPage />} />
+        <Route path="/statistics" element={
+          <AdminRoute>
+            <StatisticsPage />
+          </AdminRoute>
+        } />
         <Route path="/notifications" element={<NotificationsPage />} />
 
         {/* Các routes */}
