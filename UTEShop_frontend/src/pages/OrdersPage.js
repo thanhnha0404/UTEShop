@@ -2,6 +2,14 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { getToken } from "../utils/authStorage";
 
+function normalizeImages(imageUrl) {
+  if (Array.isArray(imageUrl)) return imageUrl;
+  if (typeof imageUrl === "string" && imageUrl.trim().length > 0) {
+    return imageUrl.split(",").map(s => s.trim()).filter(Boolean);
+  }
+  return ["/logo192.png"];
+}
+
 const statusTabs = [
   { key: "all", label: "Tất cả", status: null },
   { key: "pending", label: "Đang chờ", status: "pending" },
@@ -154,6 +162,20 @@ export default function OrdersPage() {
     }
   };
 
+  // Helper function để xác định size hiển thị
+  const getDisplaySize = (item) => {
+    // Kiểm tra upsize từ nhiều nguồn
+    const hasUpsize = Boolean(
+      item.isUpsized === true || 
+      item.isUpsized === 1 || 
+      item.isUpsized === "true" ||
+      item.size === "L" ||
+      item.size === "l"
+    );
+    
+    return hasUpsize ? 'L' : 'M';
+  };
+
   if (loading) {
     return (
       <div className="max-w-6xl mx-auto px-4 py-6">
@@ -228,23 +250,29 @@ export default function OrdersPage() {
 
                   {/* Order Items */}
                   <div className="space-y-2 mb-4">
-                    {order.orderItems?.slice(0, 2).map((item) => (
-                      <div key={item.id} className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-gray-100 rounded overflow-hidden flex-shrink-0">
-                          <img
-                            src={item.drink?.image_url || "/logo192.png"}
-                            alt={item.drink?.name}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium truncate">{item.drink?.name}</div>
-                          <div className="text-sm text-gray-500">
-                            SL: {item.quantity} • {Number(item.price).toLocaleString()}₫
+                    {order.orderItems?.slice(0, 2).map((item) => {
+                      const displaySize = getDisplaySize(item);
+                      const hasUpsize = displaySize === 'L';
+                      
+                      return (
+                        <div key={item.id} className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-gray-100 rounded overflow-hidden flex-shrink-0">
+                            <img
+                              src={normalizeImages(item.drink?.image_url)[0]}
+                              alt={item.drink?.name}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium truncate">{item.drink?.name}</div>
+                            <div className="text-sm text-gray-500">
+                              SL: {item.quantity} • Size: {displaySize} • {Number(item.price).toLocaleString()}₫
+                              {hasUpsize && <span className="text-orange-600 ml-1">(+5k)</span>}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                     {order.orderItems?.length > 2 && (
                       <div className="text-sm text-gray-500">
                         +{order.orderItems.length - 2} sản phẩm khác
@@ -327,5 +355,3 @@ export default function OrdersPage() {
     </div>
   );
 }
-
-

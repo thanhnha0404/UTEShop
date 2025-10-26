@@ -185,7 +185,10 @@ export default function DrinkDetailPage() {
               </button>
             </div>
             {drink.category && (
-              <p className="text-lg text-gray-600 mb-4">Danh mục: {drink.category.name}</p>
+              <div className="flex items-center gap-4 mb-4">
+                <p className="text-lg text-gray-600">Danh mục: {drink.category.name}</p>
+                <span className="text-lg text-gray-600">Size: {isUpsized ? 'L' : 'M'}</span>
+              </div>
             )}
           </div>
 

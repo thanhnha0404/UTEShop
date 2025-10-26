@@ -14,6 +14,10 @@ exports.login = async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
+    if (user.status !== "active") {
+      throw new UnauthorizedException('User account is not active');
+    }
+
     // Compare password with hashed password
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {

@@ -129,7 +129,10 @@ export default function ProductDetailPage() {
           </button>
         </div>
         {product.category && (
-          <p className="text-sm text-gray-500 mb-3">Danh mục: {product.category.name}</p>
+          <div className="flex items-center gap-4 mb-3">
+            <p className="text-sm text-gray-500">Danh mục: {product.category.name}</p>
+            <span className="text-sm text-gray-500">Size: {isUpsized ? 'L' : 'M'}</span>
+          </div>
         )}
         <div className="mb-4">
           {(() => {

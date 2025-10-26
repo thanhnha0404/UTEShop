@@ -2,6 +2,14 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { getToken } from "../utils/authStorage";
 
+function normalizeImages(imageUrl) {
+  if (Array.isArray(imageUrl)) return imageUrl;
+  if (typeof imageUrl === "string" && imageUrl.trim().length > 0) {
+    return imageUrl.split(",").map(s => s.trim()).filter(Boolean);
+  }
+  return ["/logo192.png"];
+}
+
 const statusConfig = {
   pending: { label: "Đang chờ", color: "bg-yellow-100 text-yellow-800", icon: "⏳" },
   confirmed: { label: "Đã xác nhận", color: "bg-blue-100 text-blue-800", icon: "✅" },
@@ -259,7 +267,7 @@ export default function OrderDetailPage() {
             <div key={item.id} className="flex items-center gap-4 p-4 border rounded-lg">
               <div className="w-16 h-16 bg-gray-100 rounded overflow-hidden flex-shrink-0">
                 <img
-                  src={item.drink?.image_url || "/logo192.png"}
+                  src={normalizeImages(item.drink?.image_url)[0]}
                   alt={item.drink?.name}
                   className="w-full h-full object-cover"
                 />
@@ -269,8 +277,8 @@ export default function OrderDetailPage() {
                 <div className="text-sm text-gray-500 space-y-1">
                   <div>Số lượng: {item.quantity}</div>
                   <div>
-                    Size: {item.size || 'M'}
-                    {item.isUpsized && <span className="text-orange-600 font-medium"> (Upsize +5,000₫)</span>}
+                    Size: {item.isUpsized ? 'L' : (item.size || 'M')}
+                    {item.isUpsized && <span className="text-orange-600 font-medium"> (+5,000₫)</span>}
                   </div>
                   {item.ice_level && <div>Đá: {item.ice_level}</div>}
                   {item.sugar_level && <div>Đường: {item.sugar_level}</div>}
@@ -279,10 +287,20 @@ export default function OrderDetailPage() {
               </div>
               <div className="text-right">
                 <div className="text-lg font-bold text-red-600">
-                  {(Number(item.price) * item.quantity).toLocaleString()}₫
+                  {(() => {
+                    const basePrice = Number(item.price) || 0;
+                    const upsizePrice = item.isUpsized ? 5000 : 0;
+                    const totalPrice = (basePrice + upsizePrice) * item.quantity;
+                    return totalPrice.toLocaleString();
+                  })()}₫
                 </div>
                 <div className="text-sm text-gray-500">
-                  {Number(item.price).toLocaleString()}₫ × {item.quantity}
+                  {(() => {
+                    const basePrice = Number(item.price) || 0;
+                    const upsizePrice = item.isUpsized ? 5000 : 0;
+                    const unitPrice = basePrice + upsizePrice;
+                    return `${unitPrice.toLocaleString()}₫ × ${item.quantity}`;
+                  })()}
                 </div>
               </div>
             </div>

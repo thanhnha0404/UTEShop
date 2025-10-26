@@ -3,6 +3,14 @@ import { getMyCart, updateCartItem, removeFromCart, getMyVouchers } from "../ser
 import { getToken } from "../utils/authStorage";
 import { useNavigate } from "react-router-dom";
 
+function normalizeImages(imageUrl) {
+  if (Array.isArray(imageUrl)) return imageUrl;
+  if (typeof imageUrl === "string" && imageUrl.trim().length > 0) {
+    return imageUrl.split(",").map(s => s.trim()).filter(Boolean);
+  }
+  return ["/logo192.png"];
+}
+
 export default function CartPage() {
   const navigate = useNavigate();
   const [items, setItems] = useState([]);
@@ -146,13 +154,12 @@ export default function CartPage() {
                 onChange={(e) => setSelected(sel => ({ ...sel, [it.drinkId]: e.target.checked }))}
               />
               <div className="w-16 h-16 bg-gray-100 rounded overflow-hidden flex-shrink-0">
-                <img src={it?.drink?.image_url || '/logo192.png'} alt={it?.drink?.name} className="w-full h-full object-cover" />
+                <img src={normalizeImages(it?.drink?.image_url)[0]} alt={it?.drink?.name} className="w-full h-full object-cover" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="font-semibold truncate">{it?.drink?.name}</div>
                 <div className="text-sm text-gray-600">
-                  Size: {it.size || 'M'}
-                  {it.isUpsized && <span className="text-orange-600 font-medium"> (Upsize)</span>}
+                  Size: {it.isUpsized ? 'L' : (it.size || 'M')}
                 </div>
                 <div className="text-sm text-gray-500 line-through">
                   {it?.drink?.salePrice ? Number(it?.drink?.price || 0).toLocaleString() + '₫' : ''}
